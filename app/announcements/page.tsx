@@ -21,7 +21,7 @@ export default function AnnouncementsPage() {
       content: "Join us for a free medical checkup and health consultation. Available services include blood pressure monitoring, diabetes screening, and general health assessment.",
       category: "Health",
       hall: "Napico Hall",
-      date: "2024-01-15",
+      date: "2024-01-16",
       time: "8:00 AM - 5:00 PM",
       priority: "high",
       attendees: 150,
