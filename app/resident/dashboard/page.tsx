@@ -1,0 +1,464 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import {
+  FileText,
+  MessageSquare,
+  Bell,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  TrendingUp,
+  Calendar,
+  MapPin,
+  Phone,
+  User,
+  Star,
+  Activity,
+  Sparkles,
+  Award,
+  Heart,
+} from "lucide-react"
+import Link from "next/link"
+import { Navbar } from "@/components/navbar"
+import Image from "next/image"
+
+export default function ResidentDashboard() {
+  const [user] = useState({
+    name: "Maria Santos",
+    email: "maria.santos@gmail.com",
+    avatar: "/placeholder.svg?height=40&width=40",
+    type: "resident" as const,
+    address: "Block 5, Lot 12, Greenpark Village",
+    phone: "09171234567",
+    memberSince: "January 2023",
+  })
+
+  const [stats, setStats] = useState({
+    totalRequests: 0,
+    pendingRequests: 0,
+    completedRequests: 0,
+    activeComplaints: 0,
+  })
+
+  const [recentActivity, setRecentActivity] = useState([
+    {
+      id: 1,
+      type: "document",
+      title: "Barangay Clearance Request",
+      status: "completed",
+      date: "2024-01-15",
+      description: "Your barangay clearance is ready for pickup",
+    },
+    {
+      id: 2,
+      type: "complaint",
+      title: "Street Light Maintenance",
+      status: "in-progress",
+      date: "2024-01-12",
+      description: "Complaint has been assigned to maintenance team",
+    },
+    {
+      id: 3,
+      type: "announcement",
+      title: "Community Clean-up Drive",
+      status: "new",
+      date: "2024-01-10",
+      description: "Join us this Saturday for our monthly clean-up",
+    },
+  ])
+
+  const [quickServices] = useState([
+    {
+      title: "File New Complaint",
+      description: "Report issues in your community",
+      icon: MessageSquare,
+      color: "from-red-500 to-red-600",
+      bgColor: "from-red-50 to-red-100",
+      link: "/resident/complaints/new",
+      popular: true,
+    },
+    {
+      title: "Request Documents",
+      description: "Apply for certificates and clearances",
+      icon: FileText,
+      color: "from-blue-500 to-blue-600",
+      bgColor: "from-blue-50 to-blue-100",
+      link: "/resident/documents/request",
+      popular: true,
+    },
+    {
+      title: "View Announcements",
+      description: "Stay updated with community news",
+      icon: Bell,
+      color: "from-green-500 to-green-600",
+      bgColor: "from-green-50 to-green-100",
+      link: "/announcements",
+      popular: false,
+    },
+    {
+      title: "Contact Barangay",
+      description: "Get in touch with officials",
+      icon: Phone,
+      color: "from-yellow-500 to-yellow-600",
+      bgColor: "from-yellow-50 to-yellow-100",
+      link: "/contact",
+      popular: false,
+    },
+  ])
+
+  // Animate stats on load
+  useEffect(() => {
+    const targetStats = {
+      totalRequests: 12,
+      pendingRequests: 3,
+      completedRequests: 9,
+      activeComplaints: 2,
+    }
+
+    const animateStats = () => {
+      const duration = 2000
+      const steps = 60
+      const stepDuration = duration / steps
+
+      let step = 0
+      const interval = setInterval(() => {
+        step++
+        const progress = step / steps
+
+        setStats({
+          totalRequests: Math.floor(targetStats.totalRequests * progress),
+          pendingRequests: Math.floor(targetStats.pendingRequests * progress),
+          completedRequests: Math.floor(targetStats.completedRequests * progress),
+          activeComplaints: Math.floor(targetStats.activeComplaints * progress),
+        })
+
+        if (step >= steps) {
+          clearInterval(interval)
+        }
+      }, stepDuration)
+    }
+
+    animateStats()
+  }, [])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-gradient-to-r from-green-100 to-green-200 text-green-800"
+      case "in-progress":
+        return "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800"
+      case "pending":
+        return "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800"
+      default:
+        return "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800"
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />
+      case "in-progress":
+        return <Clock className="h-4 w-4" />
+      case "pending":
+        return <AlertTriangle className="h-4 w-4" />
+      default:
+        return <Bell className="h-4 w-4" />
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
+      <Navbar user={user} />
+
+      <div className="pt-20 pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-blue-600 to-yellow-500 rounded-3xl p-8 text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-yellow-500/90"></div>
+              <div className="relative z-10">
+                {/* Logo Section */}
+                <div className="flex justify-center mb-6">
+                  <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full p-2 animate-float">
+                    <Image
+                      src="/images/logo_manggahan.png"
+                      alt="Barangay Manggahan Logo"
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-contain rounded-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-center w-full md:text-left md:w-auto">
+                    <h1 className="text-3xl font-bold mb-2">Welcome back, {user.name}! 👋</h1>
+                    <p className="text-blue-100 text-lg">Here's what's happening in your barangay today</p>
+                  </div>
+                  <div className="hidden md:block">
+                    <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center animate-float">
+                      <User className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold">{stats.totalRequests}</div>
+                    <div className="text-sm text-blue-100">Total Requests</div>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold">{stats.pendingRequests}</div>
+                    <div className="text-sm text-blue-100">Pending</div>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold">{stats.completedRequests}</div>
+                    <div className="text-sm text-blue-100">Completed</div>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold">{stats.activeComplaints}</div>
+                    <div className="text-sm text-blue-100">Active Issues</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Services */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold gradient-text">Quick Services</h2>
+              <Badge className="bg-gradient-to-r from-blue-100 to-yellow-100 text-blue-800 border-0">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Most Popular
+              </Badge>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {quickServices.map((service, index) => {
+                const Icon = service.icon
+                return (
+                  <Link key={index} href={service.link}>
+                    <Card className="border-0 shadow-lg card-hover bg-gradient-to-br from-white to-gray-50 h-full relative">
+                      {service.popular && (
+                        <div className="absolute -top-2 -right-2 z-10">
+                          <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border-0 shadow-lg">
+                            <Star className="h-3 w-3 mr-1" />
+                            Popular
+                          </Badge>
+                        </div>
+                      )}
+                      <CardContent className="p-6">
+                        <div
+                          className={`w-16 h-16 bg-gradient-to-br ${service.color} rounded-2xl flex items-center justify-center mb-4 animate-float`}
+                        >
+                          <Icon className="h-8 w-8 text-white" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-2">{service.title}</h3>
+                        <p className="text-gray-600 text-sm leading-relaxed">{service.description}</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Left Column - Recent Activity */}
+            <div className="lg:col-span-2">
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-blue-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-3 text-blue-800">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <Activity className="h-5 w-5 text-white" />
+                    </div>
+                    <span>Recent Activity</span>
+                    <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-0">
+                      {recentActivity.length} items
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>Track your requests, complaints, and community updates in one place</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recentActivity.map((activity) => (
+                      <div
+                        key={activity.id}
+                        className="flex items-start space-x-4 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm card-hover"
+                      >
+                        <div className="flex-shrink-0">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(activity.status)}`}
+                          >
+                            {getStatusIcon(activity.status)}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-semibold text-gray-800 truncate">{activity.title}</h4>
+                            <Badge className={`${getStatusColor(activity.status)} border-0 text-xs`}>
+                              {activity.status.replace("-", " ")}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
+                          <div className="flex items-center text-xs text-gray-500">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {new Date(activity.date).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 text-center">
+                    <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent">
+                      <Activity className="h-4 w-4 mr-2" />
+                      View All Activity
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Profile & Quick Info */}
+            <div className="space-y-6">
+              {/* Profile Card */}
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-yellow-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-3 text-yellow-800">
+                    <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <span>Profile Information</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse-glow">
+                      <span className="text-2xl font-bold text-white">
+                        {user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-800">{user.name}</h3>
+                    <p className="text-gray-600">{user.email}</p>
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-yellow-200">
+                    <div className="flex items-center space-x-3">
+                      <MapPin className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-gray-600">{user.address}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Phone className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-gray-600">{user.phone}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm text-gray-600">Member since {user.memberSince}</span>
+                    </div>
+                  </div>
+
+                  <Button className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg">
+                    <User className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Community Stats */}
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-green-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-3 text-green-800">
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-white" />
+                    </div>
+                    <span>Community Impact</span>
+                  </CardTitle>
+                  <CardDescription>Your contribution to the community</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-600">Community Engagement</span>
+                      <span className="text-sm font-bold text-green-600">85%</span>
+                    </div>
+                    <Progress value={85} className="h-2" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="text-center p-3 bg-green-50 rounded-xl">
+                      <div className="text-lg font-bold text-green-700">12</div>
+                      <div className="text-xs text-green-600">Requests Filed</div>
+                    </div>
+                    <div className="text-center p-3 bg-blue-50 rounded-xl">
+                      <div className="text-lg font-bold text-blue-700">9</div>
+                      <div className="text-xs text-blue-600">Issues Resolved</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-center space-x-2 pt-4 border-t border-green-200">
+                    <Award className="h-4 w-4 text-yellow-500" />
+                    <span className="text-sm font-medium text-gray-700">Active Community Member</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-3 text-purple-800">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <Sparkles className="h-5 w-5 text-white" />
+                    </div>
+                    <span>Quick Actions</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-3" />
+                    Emergency Report
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+                  >
+                    <FileText className="h-4 w-4 mr-3" />
+                    Download QR Code
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-green-200 text-green-600 hover:bg-green-50 bg-transparent"
+                  >
+                    <Bell className="h-4 w-4 mr-3" />
+                    Notification Settings
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-yellow-200 text-yellow-600 hover:bg-yellow-50 bg-transparent"
+                  >
+                    <Heart className="h-4 w-4 mr-3" />
+                    Community Feedback
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
