@@ -33,6 +33,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { GoogleLoginButton } from "@/components/google-login-button"
 import type { GoogleUser } from "@/lib/google-auth"
+import { apiFetch } from '@/lib/api'
 
 export default function HomePage() {
   const [loginData, setLoginData] = useState({
@@ -79,78 +80,35 @@ export default function HomePage() {
   }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
-
-    // Simulate login delay
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    try {
-      // Check if fields are filled
-      if (!loginData.email || !loginData.password) {
-        setError("Please enter both email and password")
-        setIsLoading(false)
-        return
-      }
-
-      // Create user data based on login type
-      const userData = {
-        name: loginData.userType === "staff" ? "Juan Dela Cruz" : "Maria Santos",
-        email: loginData.email,
-        type: loginData.userType,
-        position: loginData.userType === "staff" ? "Barangay Secretary" : undefined,
-        hall: loginData.userType === "staff" ? "Napico Hall" : "Greenpark Hall",
-        employeeId: loginData.userType === "staff" ? "EMP-2024-001" : undefined,
-        address: loginData.userType === "resident" ? "Block 5, Lot 12, Greenpark Village" : undefined,
-        phone: "09171234567",
-        memberSince: "January 2023",
-      }
-
-      // Store user data in localStorage
-      localStorage.setItem("currentUser", JSON.stringify(userData))
-
-      // Route based on user type
-      if (loginData.userType === "staff") {
-        // Staff login - check for staff credentials or allow demo login
-        if (
-          loginData.email.includes("@manggahan.gov.ph") ||
-          loginData.email === "admin@manggahan.gov.ph" ||
-          loginData.email === "staff@manggahan.gov.ph"
-        ) {
-          window.location.href = "/staff/dashboard"
-        } else {
-          // Allow any email for demo purposes but route to staff dashboard
-          window.location.href = "/staff/dashboard"
-        }
-      } else {
-        // Resident login
-        window.location.href = "/resident/dashboard"
-      }
-    } catch (error) {
-      setError("Login failed. Please try again.")
-      setIsLoading(false)
+  e.preventDefault();
+  setError("");
+  setIsLoading(true);
+  try {
+    if (!loginData.email || !loginData.password) {
+      setError("Please enter both email and password");
+      setIsLoading(false);
+      return;
     }
+    const resp = await apiFetch('/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({ email: loginData.email, password: loginData.password })
+    });
+    const data = await resp.json();
+    if (!data?.ok) { setError(data?.message || 'Invalid account'); setIsLoading(false); return; }
+    window.location.href = '/resident/dashboard';
+  } catch (err:any) {
+    setError('Login failed');
+  } finally {
+    setIsLoading(false);
   }
-
-  const handleGoogleSuccess = (user: GoogleUser) => {
-    // Handle Google login success - always route to resident dashboard for Google users
-    const userData = {
-      name: user.name,
-      email: user.email,
-      picture: user.picture,
-      type: "resident",
-      isGoogleUser: true,
-      address: "Google User Address",
-      phone: "N/A",
-      memberSince: "Today",
-    }
-
-    localStorage.setItem("currentUser", JSON.stringify(userData))
-    window.location.href = "/resident/dashboard"
-  }
-
-  const handleGoogleError = (error: string) => {
+};
+const handleGoogleSuccess = (_user: any) => {
+  // Google sign-in disabled for now; will be configured later.
+  setError("Google sign-in will be configured later.");
+};
+const handleGoogleError = (error: string) => {
     console.error("Google login error:", error)
     setError("Google login failed. Please try again.")
   }
@@ -423,14 +381,12 @@ export default function HomePage() {
                           <Input
                             id="staff-email"
                             type="email"
-                            placeholder="staff@manggahan.gov.ph"
+                            placeholder=""
                             value={loginData.email}
                             onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                             className="border-yellow-200 focus:border-yellow-400"
                             required
-                          />
-                          <p className="text-xs text-gray-500">Demo: Use any email ending with @manggahan.gov.ph</p>
-                        </div>
+                          /></div>
 
                         <div className="space-y-2">
                           <Label htmlFor="staff-password">Password</Label>
@@ -453,9 +409,7 @@ export default function HomePage() {
                             >
                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                          </div>
-                          <p className="text-xs text-gray-500">Demo: Use any password</p>
-                        </div>
+                          </div></div>
 
                         <Button
                           type="submit"

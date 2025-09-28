@@ -1,34 +1,25 @@
-const baseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:3001';
-
-export type SubmissionInput = {
-  name: string;
-  email: string;
-  phone?: string;
-  subject?: string;
-  category?: string;
-  message: string;
-  urgent?: boolean;
-};
-
-export async function createSubmission(input: SubmissionInput) {
-  const res = await fetch(`${baseURL}/submissions`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(input),
-    cache: 'no-store',
+// Unified API helper: always call same-origin /api to avoid CORS in dev
+export async function apiFetch(path: string, options: RequestInit = {}) {
+  const url = path.startsWith('/api/') ? path : `/api${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    credentials: 'include',
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed with ${res.status}`);
+  // Try to parse JSON; if not JSON, return text
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) {
+    return res.json();
   }
-  return res.json();
+  const text = await res.text();
+  try { return JSON.parse(text); } catch { return text; }
 }
 
-export async function listSubmissions() {
-  const res = await fetch(`${baseURL}/submissions`, {cache: 'no-store'});
-  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-  return res.json();
+// Convenience helpers for the Contact page (kept for compatibility)
+export async function createSubmission(payload: any) {
+  return apiFetch('/submissions', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function getSubmissions() {
+  return apiFetch('/submissions');
 }
