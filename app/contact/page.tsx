@@ -1,6 +1,5 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,9 +10,10 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Phone, Mail, MapPin, Clock, AlertTriangle, MessageSquare, FileText, Users, Bell, Shield, Building, Globe } from 'lucide-react'
 import Link from "next/link"
-import { createSubmission } from "@/lib/api"
+import { createSubmission, apiFetch } from "@/lib/api"
 
 export default function ContactPage() {
+  const [isAuthed, setIsAuthed] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,6 +25,20 @@ export default function ContactPage() {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        const ok = me && !me.error && (me.user || me.email || me.id);
+        if (!cancelled) setIsAuthed(!!ok);
+      } catch {
+        if (!cancelled) setIsAuthed(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const [submitted, setSubmitted] = useState(false)
 
   const emergencyContacts = [
@@ -335,7 +349,7 @@ export default function ContactPage() {
                 {onlineServices.map((service, index) => {
                   const Icon = service.icon
                   return (
-                    <Link key={index} href={service.link}>
+                    <Link key={index} href={(!isAuthed && service.link === '/resident/dashboard') ? '/' : service.link}>
                       <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                         <Icon className={`h-5 w-5 ${service.color}`} />
                         <div>

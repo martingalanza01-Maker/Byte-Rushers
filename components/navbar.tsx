@@ -28,7 +28,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import Link from "next/link"
-
+import {apiFetch} from '@/lib/api'
+import {useRouter} from 'next/navigation'
 interface NavbarProps {
   user: {
     name: string
@@ -66,9 +67,11 @@ export function Navbar({ user }: NavbarProps) {
     },
   ])
 
-  const handleLogout = () => {
+  const router = useRouter()
+  const handleLogout = async() => {
+    try { await apiFetch('/auth/logout', { method: 'POST' }) } catch { }
     localStorage.removeItem("currentUser")
-    window.location.href = "/"
+    router.push('/')
   }
 
   const residentMenuItems = [
