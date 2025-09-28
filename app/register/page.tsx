@@ -518,7 +518,7 @@ export default function RegisterPage() {
               {/* Navigation Buttons */}
               {step < 4 && (
                 <div className="flex justify-between pt-6">
-                  {step > 1 && (
+                  {step > 1 ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -526,6 +526,10 @@ export default function RegisterPage() {
                     >
                       Previous
                     </Button>
+                  ) : (
+                    <Link href="/">
+                      <Button type="button" variant="outline">Back</Button>
+                    </Link>
                   )}
                   
                   <div className="ml-auto">
