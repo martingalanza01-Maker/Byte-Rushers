@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { apiFetch } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -28,7 +29,7 @@ import { Navbar } from "@/components/navbar"
 import Image from "next/image"
 
 export default function ResidentDashboard() {
-  const [user] = useState({
+  const [user, setUser] = useState({
     name: "Maria Santos",
     email: "maria.santos@gmail.com",
     avatar: "/placeholder.svg?height=40&width=40",
@@ -58,7 +59,6 @@ export default function ResidentDashboard() {
       id: 2,
       type: "complaint",
       title: "Street Light Maintenance",
-      status: "in-progress",
       date: "2024-01-12",
       description: "Complaint has been assigned to maintenance team",
     },
@@ -146,8 +146,8 @@ export default function ResidentDashboard() {
     animateStats()
   }, [])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (status?: string) => {
+    switch (status || "pending") {
       case "completed":
         return "bg-gradient-to-r from-green-100 to-green-200 text-green-800"
       case "in-progress":
@@ -159,8 +159,8 @@ export default function ResidentDashboard() {
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  const getStatusIcon = (status?: string) => {
+    switch (status || "pending") {
       case "completed":
         return <CheckCircle className="h-4 w-4" />
       case "in-progress":
@@ -171,6 +171,41 @@ export default function ResidentDashboard() {
         return <Bell className="h-4 w-4" />
     }
   }
+
+
+  // Load actual logged-in user info
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch("/auth/me");
+        const u = me && me.user ? me.user : null;
+        if (u && !cancelled) {
+          const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.email || "User";
+          setUser(prev => ({
+            ...prev,
+            name: fullName,
+            email: u.email || prev.email,
+            address: u.address || prev.address,
+            memberSince: (() => {
+              const created = (u as any).createdAt || (u as any).created || (u as any).created_on || (u as any).created_at;
+              let dt: Date | undefined;
+              if (created) { dt = new Date(created as any); }
+              else if (typeof u.id === "string" && /^[a-f0-9]{24}$/i.test(u.id)) {
+                const ts = parseInt(u.id.substring(0,8), 16) * 1000;
+                dt = new Date(ts);
+              }
+              return dt ? dt.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : prev.memberSince;
+            })(),
+            phone: u.phone || prev.phone,
+          }));
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
@@ -296,16 +331,16 @@ export default function ResidentDashboard() {
                       >
                         <div className="flex-shrink-0">
                           <div
-                            className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(activity.status)}`}
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center ${getStatusColor(activity.status || "pending")}`}
                           >
-                            {getStatusIcon(activity.status)}
+                            {getStatusIcon(activity.status || "pending")}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <h4 className="font-semibold text-gray-800 truncate">{activity.title}</h4>
-                            <Badge className={`${getStatusColor(activity.status)} border-0 text-xs`}>
-                              {activity.status.replace("-", " ")}
+                            <Badge className={`${getStatusColor(activity.status || "pending")} border-0 text-xs`}>
+                              {(activity.status ?? "pending").replace("-", " ")}
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
