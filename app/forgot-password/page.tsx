@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Mail, Shield, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import Link from "next/link"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
 type Step = "request" | "verify" | "reset" | "success"
 type AccountType = "resident" | "staff"
 
@@ -57,9 +59,12 @@ export default function ForgotPasswordPage() {
         newErrors.email = "Please enter a valid email address"
       }
     } else {
+      // Keeping Staff tab UI, but backend flow is email-based.
+      // You can swap this to a staff-specific endpoint when available.
       if (!formData.staffId) {
         newErrors.staffId = "Staff ID is required"
       }
+      newErrors.staffId = newErrors.staffId || "Password reset via Staff ID is not supported yet. Please use email."
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -68,11 +73,24 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
+    // Call API to send reset code (email must exist)
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/forgot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      })
+      const data = await res.json()
+      if (!data.ok) {
+        setErrors({ email: data.message || "Email not found" })
+        return
+      }
       setCurrentStep("verify")
-    }, 2000)
+    } catch {
+      setErrors({ email: "Request failed" })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleVerifyCode = async (e: React.FormEvent) => {
@@ -92,11 +110,23 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/verify-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, code: formData.verificationCode }),
+      })
+      const data = await res.json()
+      if (!data.ok) {
+        setErrors({ verificationCode: data.message || "Invalid or expired code" })
+        return
+      }
       setCurrentStep("reset")
-    }, 1500)
+    } catch {
+      setErrors({ verificationCode: "Verification failed" })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -124,19 +154,45 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: formData.email, 
+          code: formData.verificationCode, 
+          password: formData.newPassword 
+        }),
+      })
+      const data = await res.json()
+      if (!data.ok) {
+        setErrors({ newPassword: data.message || "Unable to reset password" })
+        return
+      }
       setCurrentStep("success")
-    }, 2000)
+    } catch {
+      setErrors({ newPassword: "Request failed" })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const resendCode = async () => {
     setIsLoading(true)
-    // Simulate resend API call
-    setTimeout(() => {
+    setErrors({})
+    try {
+      // Reuse /auth/forgot to resend the code (only via email)
+      const res = await fetch(`${API_BASE_URL}/auth/forgot`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email }),
+      })
+      await res.json()
+    } catch {
+      // optional toast could go here
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -200,6 +256,7 @@ export default function ForgotPasswordPage() {
                         <Input
                           id="email"
                           type="email"
+                          required
                           placeholder="your.email@example.com"
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -260,6 +317,8 @@ export default function ForgotPasswordPage() {
                   <Input
                     id="verificationCode"
                     placeholder="Enter 6-digit code"
+                    inputMode="numeric"
+                    pattern="\d*"
                     value={formData.verificationCode}
                     onChange={(e) => setFormData({ ...formData, verificationCode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                     className={`text-center text-lg tracking-widest ${errors.verificationCode ? "border-red-500" : ""}`}
