@@ -72,6 +72,7 @@ export default function ResidentDashboard() {
     },
   ])
 
+  const [showAllActivity, setShowAllActivity] = useState(false)
   const [quickServices] = useState([
     {
       title: "File New Complaint",
@@ -174,6 +175,7 @@ export default function ResidentDashboard() {
 
 
   // Load actual logged-in user info
+  // Load actual logged-in user info
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -186,7 +188,7 @@ export default function ResidentDashboard() {
             ...prev,
             name: fullName,
             email: u.email || prev.email,
-            address: u.address || prev.address,
+            address: (u as any).address || prev.address,
             memberSince: (() => {
               const created = (u as any).createdAt || (u as any).created || (u as any).created_on || (u as any).created_at;
               let dt: Date | undefined;
@@ -197,7 +199,7 @@ export default function ResidentDashboard() {
               }
               return dt ? dt.toLocaleDateString(undefined, { month: "long", year: "numeric" }) : prev.memberSince;
             })(),
-            phone: u.phone || prev.phone,
+            phone: (u as any).phone || prev.phone,
           }));
         }
       } catch (e) {
@@ -206,6 +208,33 @@ export default function ResidentDashboard() {
     })();
     return () => { cancelled = true };
   }, []);
+  // Load recent activity from Submissions for the current user
+  useEffect(() => {
+    const load = async () => {
+      if (!user.email) return;
+      try {
+        const list = await apiFetch("/submissions");
+        const mine = Array.isArray(list) ? list.filter((s: any) => (s.email || "").toLowerCase() === (user.email || "").toLowerCase()) : [];
+        const deriveStatus = (s: any) => {
+          const raw = ((s.status || s.stage || s.priority || "") + "").toLowerCase();
+          if (raw.includes("complete") || raw.includes("ready")) return "completed";
+          if (raw.includes("progress") || raw.includes("processing")) return "in-progress";
+          return "pending";
+        };
+        const mapped = mine.map((s: any, i: number) => ({
+          id: s.id || s.complaintId || s.documentReqId || i + 1,
+          type: (s.submissionType || s.type || "submission").toString().toLowerCase(),
+          title: s.subject || `${s.submissionType || "Submission"} ${s.complaintId || s.documentReqId || ""}`.trim(),
+          status: deriveStatus(s),
+          date: s.createdAt || s.created || new Date().toISOString(),
+          description: s.description || (s.complaintId ? `Reference: ${s.complaintId}` : s.documentReqId ? `Reference: ${s.documentReqId}` : "Submitted"),
+        }));
+        setRecentActivity(mapped);
+      } catch (e) { /* noop */ }
+    };
+    load();
+  }, [user.email]);
+  const displayedActivity = showAllActivity ? recentActivity : recentActivity.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
@@ -324,7 +353,7 @@ export default function ResidentDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentActivity.map((activity) => (
+                    {displayedActivity.map((activity) => (
                       <div
                         key={activity.id}
                         className="flex items-start space-x-4 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm card-hover"
@@ -354,9 +383,9 @@ export default function ResidentDashboard() {
                   </div>
 
                   <div className="mt-6 text-center">
-                    <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent">
+                    <Button onClick={() => setShowAllActivity(v => !v)} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent">
                       <Activity className="h-4 w-4 mr-2" />
-                      View All Activity
+                      {showAllActivity ? "Collapse Activity" : "View All Activity"}
                     </Button>
                   </div>
                 </CardContent>
