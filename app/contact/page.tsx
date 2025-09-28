@@ -313,6 +313,9 @@ export default function ContactPage() {
                   <Button type="submit" disabled={isSubmitting} className="w-full">
                     {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
+              <Button asChild variant="outline" className="w-full mt-2">
+                <Link href="/">Back to Home</Link>
+              </Button>
                 </form>
               </CardContent>
             </Card>
