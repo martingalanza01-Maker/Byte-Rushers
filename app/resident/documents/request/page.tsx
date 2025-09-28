@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, FileText, MapPin, Phone, CreditCard, Clock, Info } from "lucide-react"
 import Link from "next/link"
+import { createSubmission } from "@/lib/api";
 
 export default function DocumentRequestPage() {
   const [formData, setFormData] = useState({
@@ -83,11 +84,32 @@ export default function DocumentRequestPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    setIsSubmitting(false)
-    setSubmitted(true)
+    try {
+      const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const payload = {
+        name: formData.requestorName,
+        requestorName: formData.requestorName,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        submissionType: 'Document',
+        documentType: formData.documentType,
+        purpose: formData.purpose,
+        pickupHall: formData.pickupHall,
+        urgentRequest: formData.urgentRequest,
+        smsNotifications: formData.smsNotifications,
+        additionalNotes: formData.additionalNotes
+      };
+      const res = await createSubmission(payload);
+      // Store the returned documentReqId to show in success screen
+      (res && res.documentReqId) && (window.sessionStorage.setItem('last_doc_id', res.documentReqId));
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -101,7 +123,7 @@ export default function DocumentRequestPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Request Submitted Successfully</h2>
               <p className="text-gray-600 mb-6">
-                Your document request has been received and assigned ID: <strong>DOC-2024-003</strong>
+                Your document request has been received and assigned ID: <strong>{typeof window !== 'undefined' ? (sessionStorage.getItem('last_doc_id') || 'N/A') : 'N/A'}</strong>
               </p>
               <div className="bg-blue-50 p-4 rounded-lg mb-6 text-left">
                 <h3 className="font-semibold text-blue-900 mb-2">Next Steps:</h3>
