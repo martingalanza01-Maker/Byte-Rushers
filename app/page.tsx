@@ -89,13 +89,12 @@ export default function HomePage() {
       setIsLoading(false);
       return;
     }
-    const resp = await apiFetch('/auth/login', {
+    const data = await apiFetch('/auth/login', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       credentials: 'include',
       body: JSON.stringify({ email: loginData.email, password: loginData.password })
     });
-    const data = await resp.json();
     if (!data?.ok) { setError(data?.message || 'Invalid account'); setIsLoading(false); return; }
     window.location.href = '/resident/dashboard';
   } catch (err:any) {
