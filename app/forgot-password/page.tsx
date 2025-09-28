@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -31,6 +31,20 @@ export default function ForgotPasswordPage() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [secondsLeft, setSecondsLeft] = useState<number>(0)
+
+  // live countdown while on "verify"
+  useEffect(() => {
+    if (!expiresAt || currentStep !== "verify") return
+    const tick = () => {
+      const diff = Math.max(0, Math.floor((Date.parse(expiresAt) - Date.now()) / 1000))
+      setSecondsLeft(diff)
+    }
+    tick()
+    const timer = setInterval(tick, 1000)
+    return () => clearInterval(timer)
+  }, [expiresAt, currentStep])
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -59,11 +73,11 @@ export default function ForgotPasswordPage() {
         newErrors.email = "Please enter a valid email address"
       }
     } else {
-      // Keeping Staff tab UI, but backend flow is email-based.
-      // You can swap this to a staff-specific endpoint when available.
+      // Keeping Staff tab UI for now
       if (!formData.staffId) {
         newErrors.staffId = "Staff ID is required"
       }
+      // NOTE: API is email-based; update when staff flow is ready
       newErrors.staffId = newErrors.staffId || "Password reset via Staff ID is not supported yet. Please use email."
     }
 
@@ -73,7 +87,6 @@ export default function ForgotPasswordPage() {
       return
     }
 
-    // Call API to send reset code (email must exist)
     try {
       const res = await fetch(`${API_BASE_URL}/auth/forgot`, {
         method: "POST",
@@ -85,6 +98,7 @@ export default function ForgotPasswordPage() {
         setErrors({ email: data.message || "Email not found" })
         return
       }
+      if (data.expiresAt) setExpiresAt(data.expiresAt)
       setCurrentStep("verify")
     } catch {
       setErrors({ email: "Request failed" })
@@ -181,15 +195,15 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     setErrors({})
     try {
-      // Reuse /auth/forgot to resend the code (only via email)
-      const res = await fetch(`${API_BASE_URL}/auth/forgot`, {
+      const res = await fetch(`${API_BASE_URL}/auth/resend-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
       })
-      await res.json()
+      const data = await res.json()
+      if (data.expiresAt) setExpiresAt(data.expiresAt)
     } catch {
-      // optional toast could go here
+      // optional: toast
     } finally {
       setIsLoading(false)
     }
@@ -312,6 +326,16 @@ export default function ForgotPasswordPage() {
                   </p>
                 </div>
 
+                {/* countdown */}
+                {secondsLeft > 0 ? (
+                  <p className="text-xs text-gray-500 text-center">
+                    Time remaining: {String(Math.floor(secondsLeft/60)).padStart(2,"0")}:
+                    {String(secondsLeft%60).padStart(2,"0")}
+                  </p>
+                ) : (
+                  <p className="text-xs text-red-600 text-center">Code expired. Please resend.</p>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="verificationCode">Verification Code</Label>
                   <Input
@@ -320,7 +344,12 @@ export default function ForgotPasswordPage() {
                     inputMode="numeric"
                     pattern="\d*"
                     value={formData.verificationCode}
-                    onChange={(e) => setFormData({ ...formData, verificationCode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        verificationCode: e.target.value.replace(/\D/g, "").slice(0, 6),
+                      })
+                    }
                     className={`text-center text-lg tracking-widest ${errors.verificationCode ? "border-red-500" : ""}`}
                     maxLength={6}
                   />
@@ -341,7 +370,7 @@ export default function ForgotPasswordPage() {
                   </Button>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full" disabled={isLoading || secondsLeft <= 0}>
                   {isLoading ? "Verifying..." : "Verify Code"}
                 </Button>
               </form>
