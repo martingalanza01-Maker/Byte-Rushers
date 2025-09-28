@@ -85,27 +85,59 @@ export default function RegisterPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    
+    e.preventDefault();
+    setError("");
+
     if (!validateStep3()) {
-      setError("Please complete all required fields and accept the terms")
-      return
+      setError("Please complete all required fields and accept the terms");
+      return;
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return
+      setError("Passwords do not match");
+      return;
     }
-    
-    setIsLoading(true)
-    
-    // Simulate registration API call
-    setTimeout(() => {
-      setIsLoading(false)
-      setStep(4)
-    }, 2000)
-  }
+
+    setIsLoading(true);
+
+    try {
+      // Build payload (exclude confirmPassword)
+      const { confirmPassword, ...payload } = formData;
+
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      // Try to read JSON either way
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        // non-JSON response (rare)
+      }
+
+      // Handle non-2xx or API-declared failure
+      if (!res.ok || (data && data.ok === false)) {
+        const message =
+          (data && (data.message || data.error)) ||
+          `Registration failed${res.status ? ` (${res.status})` : ""}`;
+        setError(message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Success
+      setIsLoading(false);
+      setStep(4);
+    } catch (err: any) {
+      setError("Registration failed. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
 
   const getPasswordStrength = (password: string) => {
     let strength = 0
@@ -351,7 +383,7 @@ export default function RegisterPage() {
                         required
                       />
                       <button
-                        type="button"
+                        type="submit"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2"
                       >
