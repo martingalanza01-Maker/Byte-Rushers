@@ -36,6 +36,40 @@ import type { GoogleUser } from "@/lib/google-auth"
 import { apiFetch } from '@/lib/api'
 
 export default function HomePage() {
+  const [sendingQuick, setSendingQuick] = useState(false);
+  const [quickDone, setQuickDone] = useState<null | 'ok' | 'err'>(null);
+  async function handleQuickContact(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (sendingQuick) return;
+    setSendingQuick(true);
+    setQuickDone(null);
+    try {
+      const nameEl = document.getElementById('contact-name') as HTMLInputElement | null;
+      const emailEl = document.getElementById('contact-email') as HTMLInputElement | null;
+      const msgEl = document.getElementById('contact-message') as HTMLTextAreaElement | null;
+      const name = nameEl?.value?.trim() || '';
+      const email = emailEl?.value?.trim() || '';
+      const message = msgEl?.value?.trim() || '';
+      if (!name || !email || !message) {
+        throw new Error('Please fill out your name, email, and message.');
+      }
+      await apiFetch('/support/email', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, message }),
+      });
+      setQuickDone('ok');
+      // clear fields
+      if (nameEl) nameEl.value = '';
+      if (emailEl) emailEl.value = '';
+      if (msgEl) msgEl.value = '';
+    } catch (err) {
+      console.error(err);
+      setQuickDone('err');
+    } finally {
+      setSendingQuick(false);
+    }
+  }
+
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
@@ -540,7 +574,9 @@ const handleGoogleError = (error: string) => {
 
             <div className="bg-gradient-to-br from-blue-50 to-yellow-50 p-8 rounded-3xl">
               <h3 className="text-2xl font-bold text-gray-800 mb-6">Quick Contact</h3>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={handleQuickContact}>
+                {quickDone === "ok" && (<div className="text-green-600 text-sm">Message sent! We'll get back to you soon.</div>)}
+                {quickDone === "err" && (<div className="text-red-600 text-sm">Failed to send. Please try again.</div>)}
                 <div>
                   <Label htmlFor="contact-name">Name</Label>
                   <Input id="contact-name" placeholder="Your full name" className="border-blue-200" />
@@ -563,7 +599,7 @@ const handleGoogleError = (error: string) => {
                     className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400"
                   />
                 </div>
-                <Button className="w-full gradient-primary text-white shadow-lg hover:shadow-xl transition-all duration-300">
+                <Button disabled={sendingQuick} className="w-full gradient-primary text-white shadow-lg hover:shadow-xl transition-all duration-300">
                   <Mail className="h-4 w-4 mr-2" />
                   Send Message
                 </Button>
