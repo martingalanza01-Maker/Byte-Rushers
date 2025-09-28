@@ -579,7 +579,7 @@ const handleGoogleError = (error: string) => {
                 {quickDone === "err" && (<div className="text-red-600 text-sm">Failed to send. Please try again.</div>)}
                 <div>
                   <Label htmlFor="contact-name">Name</Label>
-                  <Input id="contact-name" placeholder="Your full name" className="border-blue-200" />
+                  <Input id="contact-name" required placeholder="Your full name" className="border-blue-200" />
                 </div>
                 <div>
                   <Label htmlFor="contact-email">Email</Label>
@@ -588,6 +588,7 @@ const handleGoogleError = (error: string) => {
                     type="email"
                     placeholder="your.email@example.com"
                     className="border-blue-200"
+                    required
                   />
                 </div>
                 <div>
@@ -597,6 +598,7 @@ const handleGoogleError = (error: string) => {
                     rows={4}
                     placeholder="How can we help you?"
                     className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:border-blue-400"
+                    required
                   />
                 </div>
                 <Button disabled={sendingQuick} className="w-full gradient-primary text-white shadow-lg hover:shadow-xl transition-all duration-300">
