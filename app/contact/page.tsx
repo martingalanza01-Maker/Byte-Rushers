@@ -179,7 +179,7 @@ export default function ContactPage() {
                 Thank you for contacting us. We'll get back to you within 24 hours.
               </p>
               <div className="flex space-x-4 justify-center">
-                <Link href="/">
+                <Link href={isAuthed ? "/resident/dashboard" : "/"}>
                   <Button>Back to Home</Button>
                 </Link>
                 <Button variant="outline" onClick={() => setSubmitted(false)}>
@@ -328,7 +328,7 @@ export default function ContactPage() {
                     {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
               <Button asChild variant="outline" className="w-full mt-2">
-                <Link href="/">Back to Home</Link>
+                <Link href={isAuthed ? "/resident/dashboard" : "/"}>Back to Home</Link>
               </Button>
                 </form>
               </CardContent>

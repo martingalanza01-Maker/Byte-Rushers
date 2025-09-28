@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,11 +8,27 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Bell, Calendar, MapPin, Search, Filter, ChevronRight, Users, Clock, AlertCircle } from 'lucide-react'
 import Link from "next/link"
+import { apiFetch } from "@/lib/api"
 
 export default function AnnouncementsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterHall, setFilterHall] = useState("all")
+  const [isAuthed, setIsAuthed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch("/auth/me");
+        const ok = me && !me.error && (me.user || me.email || me.id);
+        if (!cancelled) setIsAuthed(!!ok);
+      } catch {
+        if (!cancelled) setIsAuthed(false);
+      }
+    })();
+    return () => { cancelled = true };
+  }, []);
 
   const announcements = [
     {
@@ -119,7 +135,7 @@ export default function AnnouncementsPage() {
                 <p className="text-gray-600">Stay updated with community news and events</p>
               </div>
             </div>
-            <Link href="/">
+            <Link href={isAuthed ? "/resident/dashboard" : "/"}>
               <Button variant="outline">
                 Back to Home
               </Button>
