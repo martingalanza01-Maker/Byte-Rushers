@@ -33,6 +33,8 @@ export default function NewComplaintPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submittedComplaintId, setSubmittedComplaintId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const complaintTypes = [
     "Infrastructure Issues",
@@ -57,13 +59,62 @@ export default function NewComplaintPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
     setIsSubmitting(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    setIsSubmitting(false)
-    setSubmitted(true)
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+      let res: Response
+      if (formData.evidence) {
+        const fd = new FormData()
+        fd.append('name', formData.anonymous ? 'Anonymous' : formData.complainantName)
+        fd.append('email', formData.anonymous ? 'anonymous@example.com' : formData.email)
+        if (formData.phone) fd.append('phone', formData.phone)
+        if (formData.address) fd.append('address', formData.address)
+        if (formData.complaintType) fd.append('type', formData.complaintType)
+        if (formData.priority) fd.append('priority', formData.priority)
+        if (formData.location) fd.append('location', formData.location)
+        if (formData.hall) fd.append('hall', formData.hall)
+        if (formData.subject) fd.append('subject', formData.subject)
+        if (formData.description) fd.append('message', formData.description)
+        fd.append('anonymous', String(formData.anonymous ?? false))
+        fd.append('smsNotifications', String(formData.smsNotifications ?? false))
+        fd.append('submissionType', 'Complaint')
+        fd.append('evidence', formData.evidence as Blob)
+        res = await fetch(`${API_BASE}/submissions/upload`, { method: 'POST', body: fd } as RequestInit)
+      } else {
+        const payload = {
+          name: formData.anonymous ? 'Anonymous' : formData.complainantName,
+          email: formData.anonymous ? 'anonymous@example.com' : formData.email,
+          phone: formData.phone || undefined,
+          address: formData.address || undefined,
+          type: formData.complaintType || undefined,
+          priority: formData.priority || undefined,
+          location: formData.location || undefined,
+          hall: formData.hall || undefined,
+          subject: formData.subject || undefined,
+          message: formData.description || undefined,
+          anonymous: formData.anonymous ?? false,
+          smsNotifications: formData.smsNotifications ?? false,
+          submissionType: 'Complaint',
+        }
+        res = await fetch(`${API_BASE}/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+      if (!res.ok) {
+        const msg = await res.text()
+        throw new Error(msg || `Request failed: ${res.status}`)
+      }
+      const data = await res.json()
+      if (data?.complaintId) setSubmittedComplaintId(data.complaintId)
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err?.message || 'Failed to submit complaint')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +135,7 @@ export default function NewComplaintPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Complaint Submitted Successfully</h2>
               <p className="text-gray-600 mb-6">
-                Your complaint has been received and assigned ID: <strong>COMP-2024-003</strong>
+                Your complaint has been received and assigned ID: <strong>{submittedComplaintId}</strong>
               </p>
               <div className="bg-blue-50 p-4 rounded-lg mb-6">
                 <p className="text-sm text-blue-800">
@@ -122,6 +173,11 @@ export default function NewComplaintPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Form */}
             <div className="lg:col-span-2 space-y-6">

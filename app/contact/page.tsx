@@ -141,7 +141,7 @@ export default function ContactPage() {
     setIsSubmitting(true)
 
     try {
-    await createSubmission(formData as any);
+    await createSubmission({ ...(formData as any), submissionType: 'Inquiry' });
   } catch (err) {
     console.error(err);
     alert('Failed to submit. Please try again.');
