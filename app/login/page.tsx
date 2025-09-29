@@ -24,6 +24,8 @@ export default function LoginPage() {
       })
       if (res?.ok) {
         const t = String(res.user?.type || userType).toLowerCase() as PortalType
+
+        console.log('Logged in user type:', t)
         router.replace(t === 'staff' ? '/staff/dashboard' : '/resident/dashboard')
       } else {
         setError(res?.message || 'Invalid credentials')

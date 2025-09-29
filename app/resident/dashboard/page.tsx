@@ -41,6 +41,7 @@ export default function ResidentDashboard() {
         if (cancelled) return;
         if (!me?.authenticated) { router.replace('/'); return; }
         const t = String(me.user?.type || 'resident').toLowerCase();
+        console.log('Resident User type:', t);
         if (t !== 'resident') { router.replace('/staff/dashboard'); return; }
       } catch { router.replace('/'); }
     })();

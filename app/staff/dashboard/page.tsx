@@ -131,6 +131,7 @@ export default function StaffDashboard() {
         if (cancelled) return;
         if (!me?.authenticated) { router.replace('/'); return; }
         const t = String(me.user?.type || 'resident').toLowerCase();
+        console.log('Staff User type:', t);
         if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
       } catch { router.replace('/'); }
     })();
