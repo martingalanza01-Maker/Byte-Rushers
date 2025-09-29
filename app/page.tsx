@@ -338,6 +338,7 @@ const handleGoogleError = (error: string) => {
                               onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                               className="border-blue-200 focus:border-blue-400 pr-10"
                               required
+                              autoComplete="off"
                             />
                             <Button
                               type="button"
@@ -409,6 +410,7 @@ const handleGoogleError = (error: string) => {
                               onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                               className="border-yellow-200 focus:border-yellow-400 pr-10"
                               required
+                              autoComplete="off"
                             />
                             <Button
                               type="button"
