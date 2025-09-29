@@ -41,6 +41,7 @@ export default function RegisterPage() {
     // Agreements
     termsAccepted: false,
     privacyAccepted: false,
+    userType: "resident", // default user type
   })
 
   const handleInputChange = (field: string, value: string | boolean) => {
