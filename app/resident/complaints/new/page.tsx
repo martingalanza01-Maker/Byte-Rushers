@@ -80,6 +80,7 @@ export default function NewComplaintPage() {
         fd.append('smsNotifications', String(formData.smsNotifications ?? false))
         fd.append('submissionType', 'Complaint')
         fd.append('evidence', formData.evidence as Blob)
+        fd.append('status', 'active')
         res = await fetch(`${API_BASE}/submissions/upload`, { method: 'POST', body: fd } as RequestInit)
       } else {
         const payload = {

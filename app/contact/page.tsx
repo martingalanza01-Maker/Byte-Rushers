@@ -22,6 +22,7 @@ export default function ContactPage() {
     category: "",
     message: "",
     urgent: false,
+    status: "active",
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)

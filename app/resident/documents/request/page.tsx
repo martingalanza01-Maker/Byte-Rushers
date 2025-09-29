@@ -27,6 +27,7 @@ export default function DocumentRequestPage() {
     urgentRequest: false,
     smsNotifications: true,
     additionalNotes: "",
+    status: "pending",
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -98,7 +99,8 @@ export default function DocumentRequestPage() {
         pickupHall: formData.pickupHall,
         urgentRequest: formData.urgentRequest,
         smsNotifications: formData.smsNotifications,
-        additionalNotes: formData.additionalNotes
+        additionalNotes: formData.additionalNotes,
+        status: formData.status,
       };
       const res = await createSubmission(payload);
       // Store the returned documentReqId to show in success screen
