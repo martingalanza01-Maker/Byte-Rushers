@@ -78,40 +78,17 @@ export default function HomePage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [stats, setStats] = useState({
-    totalResidents: 15420,
-    documentsProcessed: 2847,
-    complaintsResolved: 1293,
-    activeStaff: 48,
-  })
-
-  // Animate stats on load
+  const [stats, setStats] = useState({ residents: 0, documents: 0, resolved: 0, staff: 0 })
+  // Load home stats from API
   useEffect(() => {
-    const animateStats = () => {
-      const duration = 2000
-      const steps = 60
-      const stepDuration = duration / steps
+    (async () => {
+      try {
+        const s = await apiFetch('/stats/dashboard');
+        if (s && s.ok) setStats({ residents: s.residents, documents: s.documents, resolved: s.resolved, staff: s.staff });
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
-      let step = 0
-      const interval = setInterval(() => {
-        step++
-        const progress = step / steps
-
-        setStats({
-          totalResidents: Math.floor(15420 * progress),
-          documentsProcessed: Math.floor(2847 * progress),
-          complaintsResolved: Math.floor(1293 * progress),
-          activeStaff: Math.floor(48 * progress),
-        })
-
-        if (step >= steps) {
-          clearInterval(interval)
-        }
-      }, stepDuration)
-    }
-
-    animateStats()
-  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -127,10 +104,10 @@ export default function HomePage() {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       credentials: 'include',
-      body: JSON.stringify({ email: loginData.email, password: loginData.password, userType: loginData.userType})
+      body: JSON.stringify({ email: loginData.email, password: loginData.password, userType: loginData.userType })
     });
     if (!data?.ok) { setError(data?.message || 'Invalid account'); setIsLoading(false); return; }
-    window.location.href = '/resident/dashboard';
+    window.location.href = (loginData.userType === 'staff') ? '/staff/dashboard' : '/resident/dashboard';
   } catch (err:any) {
     setError('Login failed');
   } finally {
@@ -253,19 +230,19 @@ const handleGoogleError = (error: string) => {
               {/* Quick Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg card-hover">
-                  <div className="text-2xl font-bold gradient-text">{stats.totalResidents.toLocaleString()}</div>
+                  <div className="text-2xl font-bold gradient-text">{stats.residents.toLocaleString()}</div>
                   <div className="text-sm text-gray-600">Residents</div>
                 </div>
                 <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg card-hover">
-                  <div className="text-2xl font-bold gradient-text">{stats.documentsProcessed.toLocaleString()}</div>
+                  <div className="text-2xl font-bold gradient-text">{stats.documents.toLocaleString()}</div>
                   <div className="text-sm text-gray-600">Documents</div>
                 </div>
                 <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg card-hover">
-                  <div className="text-2xl font-bold gradient-text">{stats.complaintsResolved.toLocaleString()}</div>
+                  <div className="text-2xl font-bold gradient-text">{stats.resolved.toLocaleString()}</div>
                   <div className="text-sm text-gray-600">Resolved</div>
                 </div>
                 <div className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg card-hover">
-                  <div className="text-2xl font-bold gradient-text">{stats.activeStaff}</div>
+                  <div className="text-2xl font-bold gradient-text">{stats.staff}</div>
                   <div className="text-sm text-gray-600">Staff</div>
                 </div>
               </div>
