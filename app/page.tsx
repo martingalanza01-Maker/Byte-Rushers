@@ -127,7 +127,7 @@ export default function HomePage() {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       credentials: 'include',
-      body: JSON.stringify({ email: loginData.email, password: loginData.password })
+      body: JSON.stringify({ email: loginData.email, password: loginData.password, userType: loginData.userType})
     });
     if (!data?.ok) { setError(data?.message || 'Invalid account'); setIsLoading(false); return; }
     window.location.href = '/resident/dashboard';
