@@ -1,5 +1,7 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+
 import { useState, useEffect } from "react"
 import { apiFetch } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,7 +31,22 @@ import { Navbar } from "@/components/navbar"
 import Image from "next/image"
 
 export default function ResidentDashboard() {
-  const [user, setUser] = useState({
+  
+  const router = useRouter();
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (cancelled) return;
+        if (!me?.authenticated) { router.replace('/'); return; }
+        const t = String(me.user?.type || 'resident').toLowerCase();
+        if (t !== 'resident') { router.replace('/staff/dashboard'); return; }
+      } catch { router.replace('/'); }
+    })();
+    return () => { cancelled = true as any; };
+  }, []);
+const [user, setUser] = useState({
     name: "Maria Santos",
     email: "maria.santos@gmail.com",
     avatar: "/placeholder.svg?height=40&width=40",

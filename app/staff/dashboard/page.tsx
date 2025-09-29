@@ -1,5 +1,9 @@
 "use client"
 
+import { useRouter } from "next/navigation"
+
+import { apiFetch } from "@/lib/api"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -117,7 +121,23 @@ export default function StaffDashboard() {
   ])
 
   // Animate stats on load
+  
+  const router = useRouter();
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (cancelled) return;
+        if (!me?.authenticated) { router.replace('/'); return; }
+        const t = String(me.user?.type || 'resident').toLowerCase();
+        if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
+      } catch { router.replace('/'); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+useEffect(() => {
     const targetStats = {
       totalResidents: 15420,
       pendingRequests: 23,
