@@ -1,16 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Mail, Shield, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import {useEffect, useState} from "react"
+import {Button} from "@/components/ui/button"
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card"
+import {Input} from "@/components/ui/input"
+import {Label} from "@/components/ui/label"
+import {Alert, AlertDescription} from "@/components/ui/alert"
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
+import {ArrowLeft, Mail, Shield, CheckCircle, AlertCircle, Eye, EyeOff} from "lucide-react"
 import Link from "next/link"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 type Step = "request" | "verify" | "reset" | "success"
 type AccountType = "resident" | "staff"
@@ -21,20 +21,20 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  
+  const [expiresAt, setExpiresAt] = useState<string | null>(null)
+  const [secondsLeft, setSecondsLeft] = useState(0)
+
   const [formData, setFormData] = useState({
     email: "",
     staffId: "",
     verificationCode: "",
     newPassword: "",
-    confirmPassword: ""
+    confirmPassword: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [expiresAt, setExpiresAt] = useState<string | null>(null)
-  const [secondsLeft, setSecondsLeft] = useState<number>(0)
 
-  // live countdown while on "verify"
+  // countdown for verify step
   useEffect(() => {
     if (!expiresAt || currentStep !== "verify") return
     const tick = () => {
@@ -46,62 +46,74 @@ export default function ForgotPasswordPage() {
     return () => clearInterval(timer)
   }, [expiresAt, currentStep])
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
-  }
-
-  const validatePassword = (password: string) => {
-    return password.length >= 8 && 
-           /[A-Z]/.test(password) && 
-           /[a-z]/.test(password) && 
-           /\d/.test(password)
-  }
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const validatePassword = (password: string) =>
+    password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password)
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setErrors({})
 
-    // Validation
     const newErrors: Record<string, string> = {}
-    
     if (accountType === "resident") {
-      if (!formData.email) {
-        newErrors.email = "Email is required"
-      } else if (!validateEmail(formData.email)) {
-        newErrors.email = "Please enter a valid email address"
-      }
+      if (!formData.email) newErrors.email = "Email is required"
+      else if (!validateEmail(formData.email)) newErrors.email = "Please enter a valid email address"
     } else {
-      // Keeping Staff tab UI for now
-      if (!formData.staffId) {
-        newErrors.staffId = "Staff ID is required"
-      }
-      // NOTE: API is email-based; update when staff flow is ready
-      newErrors.staffId = newErrors.staffId || "Password reset via Staff ID is not supported yet. Please use email."
+      if (!formData.staffId) newErrors.staffId = "Staff ID is required"
     }
-
-    if (Object.keys(newErrors).length > 0) {
+    if (Object.keys(newErrors).length) {
       setErrors(newErrors)
       setIsLoading(false)
       return
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/forgot`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email }),
-      })
+      const res = await fetch(
+        API_BASE_URL + (accountType === "staff" ? "/auth/forgot-staff" : "/auth/forgot"),
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(
+            accountType === "staff" ? {staffId: formData.staffId} : {email: formData.email},
+          ),
+        },
+      )
       const data = await res.json()
       if (!data.ok) {
-        setErrors({ email: data.message || "Email not found" })
+        setErrors(
+          accountType === "staff"
+            ? {staffId: data.message || "Staff not found"}
+            : {email: data.message || "Email not found"},
+        )
         return
       }
       if (data.expiresAt) setExpiresAt(data.expiresAt)
       setCurrentStep("verify")
     } catch {
-      setErrors({ email: "Request failed" })
+      setErrors(accountType === "staff" ? {staffId: "Request failed"} : {email: "Request failed"})
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const resendCode = async () => {
+    setIsLoading(true)
+    try {
+      const res = await fetch(
+        API_BASE_URL + (accountType === "staff" ? "/auth/resend-code-staff" : "/auth/resend-code"),
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(
+            accountType === "staff" ? {staffId: formData.staffId} : {email: formData.email},
+          ),
+        },
+      )
+      const data = await res.json()
+      if (data.expiresAt) setExpiresAt(data.expiresAt)
+    } catch {
+      // ignore
     } finally {
       setIsLoading(false)
     }
@@ -113,31 +125,37 @@ export default function ForgotPasswordPage() {
     setErrors({})
 
     if (!formData.verificationCode) {
-      setErrors({ verificationCode: "Verification code is required" })
+      setErrors({verificationCode: "Verification code is required"})
       setIsLoading(false)
       return
     }
-
     if (formData.verificationCode.length !== 6) {
-      setErrors({ verificationCode: "Verification code must be 6 digits" })
+      setErrors({verificationCode: "Code must be 6 digits"})
       setIsLoading(false)
       return
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/verify-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email, code: formData.verificationCode }),
-      })
+      const res = await fetch(
+        API_BASE_URL + (accountType === "staff" ? "/auth/verify-code-staff" : "/auth/verify-code"),
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(
+            accountType === "staff"
+              ? {staffId: formData.staffId, code: formData.verificationCode}
+              : {email: formData.email, code: formData.verificationCode},
+          ),
+        },
+      )
       const data = await res.json()
       if (!data.ok) {
-        setErrors({ verificationCode: data.message || "Invalid or expired code" })
+        setErrors({verificationCode: data.message || "Invalid or expired code"})
         return
       }
       setCurrentStep("reset")
     } catch {
-      setErrors({ verificationCode: "Verification failed" })
+      setErrors({verificationCode: "Verification failed"})
     } finally {
       setIsLoading(false)
     }
@@ -148,62 +166,49 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     setErrors({})
 
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.newPassword) {
-      newErrors.newPassword = "New password is required"
-    } else if (!validatePassword(formData.newPassword)) {
-      newErrors.newPassword = "Password must be at least 8 characters with uppercase, lowercase, and number"
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your password"
-    } else if (formData.newPassword !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match"
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
+    const errs: Record<string, string> = {}
+    if (!formData.newPassword) errs.newPassword = "New password is required"
+    if (!formData.confirmPassword) errs.confirmPassword = "Please confirm your password"
+    if (formData.newPassword && !validatePassword(formData.newPassword))
+      errs.newPassword = "Must be 8+ chars with upper, lower, number"
+    if (formData.confirmPassword && formData.newPassword !== formData.confirmPassword)
+      errs.confirmPassword = "Passwords do not match"
+    if (Object.keys(errs).length) {
+      setErrors(errs)
       setIsLoading(false)
       return
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email: formData.email, 
-          code: formData.verificationCode, 
-          password: formData.newPassword 
-        }),
-      })
+      const res = await fetch(
+        API_BASE_URL +
+          (accountType === "staff" ? "/auth/reset-password-staff" : "/auth/reset-password"),
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(
+            accountType === "staff"
+              ? {
+                  staffId: formData.staffId,
+                  code: formData.verificationCode,
+                  password: formData.newPassword,
+                }
+              : {
+                  email: formData.email,
+                  code: formData.verificationCode,
+                  password: formData.newPassword,
+                },
+          ),
+        },
+      )
       const data = await res.json()
       if (!data.ok) {
-        setErrors({ newPassword: data.message || "Unable to reset password" })
+        setErrors({newPassword: data.message || "Unable to reset password"})
         return
       }
       setCurrentStep("success")
     } catch {
-      setErrors({ newPassword: "Request failed" })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const resendCode = async () => {
-    setIsLoading(true)
-    setErrors({})
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/resend-code`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email }),
-      })
-      const data = await res.json()
-      if (data.expiresAt) setExpiresAt(data.expiresAt)
-    } catch {
-      // optional: toast
+      setErrors({newPassword: "Request failed"})
     } finally {
       setIsLoading(false)
     }
@@ -257,7 +262,7 @@ export default function ForgotPasswordPage() {
             {/* Step 1: Request Reset */}
             {currentStep === "request" && (
               <form onSubmit={handleRequestReset} className="space-y-4">
-                <Tabs value={accountType} onValueChange={(value) => setAccountType(value as AccountType)}>
+                <Tabs value={accountType} onValueChange={(v) => setAccountType(v as AccountType)}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="resident">Resident</TabsTrigger>
                     <TabsTrigger value="staff">Staff</TabsTrigger>
@@ -273,12 +278,10 @@ export default function ForgotPasswordPage() {
                           required
                           placeholder="your.email@example.com"
                           value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
                           className={errors.email ? "border-red-500" : ""}
                         />
-                        {errors.email && (
-                          <p className="text-sm text-red-600">{errors.email}</p>
-                        )}
+                        {errors.email && <p className="text-sm text-red-600">{errors.email}</p>}
                       </div>
                     </TabsContent>
 
@@ -289,12 +292,10 @@ export default function ForgotPasswordPage() {
                           id="staffId"
                           placeholder="Enter your staff ID"
                           value={formData.staffId}
-                          onChange={(e) => setFormData({ ...formData, staffId: e.target.value })}
+                          onChange={(e) => setFormData({...formData, staffId: e.target.value})}
                           className={errors.staffId ? "border-red-500" : ""}
                         />
-                        {errors.staffId && (
-                          <p className="text-sm text-red-600">{errors.staffId}</p>
-                        )}
+                        {errors.staffId && <p className="text-sm text-red-600">{errors.staffId}</p>}
                       </div>
                     </TabsContent>
                   </div>
@@ -303,7 +304,8 @@ export default function ForgotPasswordPage() {
                 <Alert className="border-blue-200 bg-blue-50">
                   <AlertCircle className="h-4 w-4 text-blue-600" />
                   <AlertDescription className="text-blue-800">
-                    A verification code will be sent to your registered {accountType === "resident" ? "email" : "contact method"}.
+                    A verification code will be sent to your registered{" "}
+                    {accountType === "resident" ? "email" : "contact method"}.
                   </AlertDescription>
                 </Alert>
 
@@ -329,8 +331,8 @@ export default function ForgotPasswordPage() {
                 {/* countdown */}
                 {secondsLeft > 0 ? (
                   <p className="text-xs text-gray-500 text-center">
-                    Time remaining: {String(Math.floor(secondsLeft/60)).padStart(2,"0")}:
-                    {String(secondsLeft%60).padStart(2,"0")}
+                    Time remaining: {String(Math.floor(secondsLeft / 60)).padStart(2, "0")}:
+                    {String(secondsLeft % 60).padStart(2, "0")}
                   </p>
                 ) : (
                   <p className="text-xs text-red-600 text-center">Code expired. Please resend.</p>
@@ -350,7 +352,9 @@ export default function ForgotPasswordPage() {
                         verificationCode: e.target.value.replace(/\D/g, "").slice(0, 6),
                       })
                     }
-                    className={`text-center text-lg tracking-widest ${errors.verificationCode ? "border-red-500" : ""}`}
+                    className={`text-center text-lg tracking-widest ${
+                      errors.verificationCode ? "border-red-500" : ""
+                    }`}
                     maxLength={6}
                   />
                   {errors.verificationCode && (
@@ -387,7 +391,7 @@ export default function ForgotPasswordPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter new password"
                       value={formData.newPassword}
-                      onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                      onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
                       className={errors.newPassword ? "border-red-500" : ""}
                     />
                     <Button
@@ -413,7 +417,7 @@ export default function ForgotPasswordPage() {
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm new password"
                       value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                       className={errors.confirmPassword ? "border-red-500" : ""}
                     />
                     <Button
@@ -463,9 +467,7 @@ export default function ForgotPasswordPage() {
                 </Alert>
 
                 <Link href="/">
-                  <Button className="w-full">
-                    Return to Sign In
-                  </Button>
+                  <Button className="w-full">Return to Sign In</Button>
                 </Link>
               </div>
             )}
