@@ -63,6 +63,16 @@ const [user, setUser] = useState({
     activeComplaints: 0,
   })
 
+  const [residentStats, setResidentStats] = useState({
+    totalRequests: 0,
+    pending: 0,
+    completed: 0,
+    activeIssues: 0,
+    issuesResolved: 0,
+    communityEngagement: 0,
+  })
+
+
   const [recentActivity, setRecentActivity] = useState([
     {
       id: 1,
@@ -129,46 +139,67 @@ const [user, setUser] = useState({
     },
   ])
 
-  // Animate stats on load
+  
+  // Animate stats on load (after fetching server values)
   useEffect(() => {
-    const targetStats = {
-      totalRequests: 12,
-      pendingRequests: 3,
-      completedRequests: 9,
-      activeComplaints: 2,
-    }
+    let cancelled = false;
+    const run = async () => {
+      try {
+        // get current user email first
+        const me = await apiFetch("/auth/me");
+        if (!me?.user?.email) return;
+        const email = String(me.user.email);
+        // fetch resident dashboard stats
+        const data = await apiFetch(`/stats/dashboard/resident?email=${encodeURIComponent(email)}`);
+        if (cancelled || !data) return;
+        const rs = {
+          totalRequests: Number(data.totalRequests || 0),
+          pending: Number(data.pending || 0),
+          completed: Number(data.completed || 0),
+          activeIssues: Number(data.activeIssues || 0),
+          issuesResolved: Number(data.issuesResolved || 0),
+          communityEngagement: Number(data.communityEngagement || 0),
+        };
+        setResidentStats(rs);
 
-    const animateStats = () => {
-      const duration = 2000
-      const steps = 60
-      const stepDuration = duration / steps
+        // animate the four headline tiles using the fetched values
+        const targetStats = {
+          totalRequests: rs.totalRequests,
+          pendingRequests: rs.pending,
+          completedRequests: rs.completed,
+          activeComplaints: rs.activeIssues,
+        };
+        const duration = 1000;
+        const steps = 60;
+        const stepDuration = duration / steps;
+        let step = 0;
+        const interval = setInterval(() => {
+          step++;
+          const progress = step / steps;
+          setStats({
+            totalRequests: Math.floor(targetStats.totalRequests * progress),
+            pendingRequests: Math.floor(targetStats.pendingRequests * progress),
+            completedRequests: Math.floor(targetStats.completedRequests * progress),
+            activeComplaints: Math.floor(targetStats.activeComplaints * progress),
+          });
+          if (step >= steps) clearInterval(interval);
+        }, stepDuration);
+      } catch {}
+    };
+    run();
+    return () => { cancelled = false } // placeholder to be replaced
+  }, []);
 
-      let step = 0
-      const interval = setInterval(() => {
-        step++
-        const progress = step / steps
+    
 
-        setStats({
-          totalRequests: Math.floor(targetStats.totalRequests * progress),
-          pendingRequests: Math.floor(targetStats.pendingRequests * progress),
-          completedRequests: Math.floor(targetStats.completedRequests * progress),
-          activeComplaints: Math.floor(targetStats.activeComplaints * progress),
-        })
-
-        if (step >= steps) {
-          clearInterval(interval)
-        }
-      }, stepDuration)
-    }
-
-    animateStats()
-  }, [])
 
   const getStatusColor = (status?: string) => {
     switch (status || "pending") {
       case "completed":
         return "bg-gradient-to-r from-green-100 to-green-200 text-green-800"
-      case "in-progress":
+      case "resolved":
+        return "bg-gradient-to-r from-green-100 to-green-200 text-green-800"
+      case "active":
         return "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800"
       case "pending":
         return "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800"
@@ -232,17 +263,11 @@ const [user, setUser] = useState({
       try {
         const list = await apiFetch("/submissions");
         const mine = Array.isArray(list) ? list.filter((s: any) => (s.email || "").toLowerCase() === (user.email || "").toLowerCase()) : [];
-        const deriveStatus = (s: any) => {
-          const raw = ((s.status || s.stage || s.priority || "") + "").toLowerCase();
-          if (raw.includes("complete") || raw.includes("ready")) return "completed";
-          if (raw.includes("progress") || raw.includes("processing")) return "in-progress";
-          return "pending";
-        };
         const mapped = mine.map((s: any, i: number) => ({
           id: s.id || s.complaintId || s.documentReqId || i + 1,
           type: (s.submissionType || s.type || "submission").toString().toLowerCase(),
           title: s.subject || `${s.submissionType || "Submission"} ${s.complaintId || s.documentReqId || ""}`.trim(),
-          status: deriveStatus(s),
+          status: s.status,
           date: s.createdAt || s.created || new Date().toISOString(),
           description: s.description || (s.complaintId ? `Reference: ${s.complaintId}` : s.documentReqId ? `Reference: ${s.documentReqId}` : "Submitted"),
         }));
@@ -449,11 +474,6 @@ const [user, setUser] = useState({
                       <span className="text-sm text-gray-600">Member since {user.memberSince}</span>
                     </div>
                   </div>
-
-                  <Button className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg">
-                    <User className="h-4 w-4 mr-2" />
-                    Edit Profile
-                  </Button>
                 </CardContent>
               </Card>
 
@@ -472,68 +492,29 @@ const [user, setUser] = useState({
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-600">Community Engagement</span>
-                      <span className="text-sm font-bold text-green-600">85%</span>
+                      <span className="text-sm font-bold text-green-600">{residentStats.communityEngagement}%</span>
                     </div>
-                    <Progress value={85} className="h-2" />
+                    <Progress value={residentStats.communityEngagement} className="h-2" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-4">
                     <div className="text-center p-3 bg-green-50 rounded-xl">
-                      <div className="text-lg font-bold text-green-700">12</div>
+                      <div className="text-lg font-bold text-green-700">{residentStats.completed}</div>
                       <div className="text-xs text-green-600">Requests Filed</div>
                     </div>
                     <div className="text-center p-3 bg-blue-50 rounded-xl">
-                      <div className="text-lg font-bold text-blue-700">9</div>
+                      <div className="text-lg font-bold text-blue-700">{residentStats.issuesResolved}</div>
                       <div className="text-xs text-blue-600">Issues Resolved</div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center space-x-2 pt-4 border-t border-green-200">
-                    <Award className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm font-medium text-gray-700">Active Community Member</span>
-                  </div>
-                </CardContent>
-              </Card>
+                  {residentStats.communityEngagement > 75 && (
+                    <div className="flex items-center justify-center space-x-2 pt-4 border-t border-green-200">
+                      <Award className="h-4 w-4 text-yellow-500" />
+                      <span className="text-sm font-medium text-gray-700">Active Community Member</span>
+                    </div>)
+                  }
 
-              {/* Quick Actions */}
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-3 text-purple-800">
-                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-white" />
-                    </div>
-                    <span>Quick Actions</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
-                  >
-                    <MessageSquare className="h-4 w-4 mr-3" />
-                    Emergency Report
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
-                  >
-                    <FileText className="h-4 w-4 mr-3" />
-                    Download QR Code
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start border-green-200 text-green-600 hover:bg-green-50 bg-transparent"
-                  >
-                    <Bell className="h-4 w-4 mr-3" />
-                    Notification Settings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start border-yellow-200 text-yellow-600 hover:bg-yellow-50 bg-transparent"
-                  >
-                    <Heart className="h-4 w-4 mr-3" />
-                    Community Feedback
-                  </Button>
                 </CardContent>
               </Card>
             </div>
