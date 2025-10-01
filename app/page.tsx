@@ -704,7 +704,7 @@ export default function HomePage() {
           </div>
 
           <div className="border-t border-blue-700 mt-12 pt-8 text-center text-blue-200">
-            <p>&copy; 2024 Barangay Manggahan. All rights reserved. Built with ❤️ for our community.</p>
+            <p>&copy; 2025 Barangay Manggahan. All rights reserved. Built with ❤️ for our community.</p>
           </div>
         </div>
       </footer>
