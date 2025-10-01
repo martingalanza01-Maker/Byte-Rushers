@@ -7,7 +7,7 @@
     "dev": "next dev",
     "lint": "next lint",
     "prestart": "next build",
-    "start": "next start"
+    "start": "next start -H 127.0.0.1 -p 3000"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
