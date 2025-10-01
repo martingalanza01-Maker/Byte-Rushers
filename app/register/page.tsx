@@ -42,7 +42,11 @@ export default function RegisterPage() {
     termsAccepted: false,
     privacyAccepted: false,
   })
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+  const [createdResidentId, setCreatedResidentId] = useState<string | null>(null)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001'
 
   const validateEmailAvailability = async (email: string) => {
     try {
@@ -89,6 +93,8 @@ export default function RegisterPage() {
         setError(err?.error?.message || err?.message || 'Registration failed')
         return
       }
+      const json = await res.json().catch(() => null)
+      setCreatedResidentId(json?.id || null)
       setStep(4) // success step
     } catch (err:any) {
       setError('Network error while creating account')
@@ -120,6 +126,32 @@ export default function RegisterPage() {
            formData.termsAccepted &&
            formData.privacyAccepted
   }
+
+  const handleResendVerification = async () => {
+  try {
+    setResendMessage(null)
+    setResendLoading(true)
+    const endpoint = createdResidentId
+      ? `${API_BASE}/residents/${createdResidentId}/resend-verification`
+      : `${API_BASE}/residents/resend-verification`
+
+    const options: RequestInit = createdResidentId
+      ? { method: 'POST' }
+      : { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email: formData.email}) }
+
+    const resp = await fetch(endpoint, options)
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({}))
+      throw new Error(err?.error?.message || err?.message || 'Failed to resend verification email')
+    }
+    setResendMessage('Verification email sent. Please check your inbox.')
+  } catch (e: any) {
+    setResendMessage(e.message || 'Failed to resend verification email')
+  } finally {
+    setResendLoading(false)
+  }
+}
+
 
   const handleNext = async () => {
     setError("")
@@ -522,6 +554,18 @@ export default function RegisterPage() {
                       Go to Login
                     </Button>
                   </Link>
+                  <div className="text-sm text-muted-foreground mt-2">
+                  Did not receive email?{" "}
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    className="underline"
+                    disabled={resendLoading}
+                  >
+                    {resendLoading ? "Resending..." : "Resend"}
+                  </button>
+                </div>
+                {resendMessage && <p className="text-xs mt-2">{resendMessage}</p>}
                 </div>
               )}
 
