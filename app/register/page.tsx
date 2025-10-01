@@ -42,6 +42,61 @@ export default function RegisterPage() {
     termsAccepted: false,
     privacyAccepted: false,
   })
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+
+  const validateEmailAvailability = async (email: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/residents/exists?email=${encodeURIComponent(email)}`)
+      if (!res.ok) return {exists: false}
+      const data = await res.json()
+      return {exists: !!data.exists}
+    } catch {
+      return {exists: false}
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    if (!validateStep3()) {
+      setError('Please complete all required fields and accept the terms')
+      return
+    }
+    setIsLoading(true)
+    try {
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        middleName: formData.middleName || '',
+        email: formData.email,
+        phone: formData.phone,
+        birthDate: formData.birthDate,
+        gender: formData.gender,
+        civilStatus: formData.civilStatus,
+        houseNumber: formData.houseNumber,
+        street: formData.street,
+        purok: formData.purok,
+        barangayHall: formData.barangayHall,
+        password: formData.password
+      }
+      const res = await fetch(`${API_BASE}/residents`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({message:'Registration failed'}))
+        setError(err?.error?.message || err?.message || 'Registration failed')
+        return
+      }
+      setStep(4) // success step
+    } catch (err:any) {
+      setError('Network error while creating account')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -66,12 +121,20 @@ export default function RegisterPage() {
            formData.privacyAccepted
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setError("")
     
     if (step === 1 && !validateStep1()) {
       setError("Please fill in all required fields")
       return
+    }
+    // Email availability check on Step 1
+    if (step === 1) {
+      const {exists} = await validateEmailAvailability(formData.email)
+      if (exists) {
+        setError('This email is already registered')
+        return
+      }
     }
     
     if (step === 2 && !validateStep2()) {
@@ -84,28 +147,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    
-    if (!validateStep3()) {
-      setError("Please complete all required fields and accept the terms")
-      return
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return
-    }
-    
-    setIsLoading(true)
-    
-    // Simulate registration API call
-    setTimeout(() => {
-      setIsLoading(false)
-      setStep(4)
-    }, 2000)
-  }
+  
 
   const getPasswordStrength = (password: string) => {
     let strength = 0
@@ -160,7 +202,7 @@ export default function RegisterPage() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} onSubmit={handleSubmit}>
               {/* Step 1: Personal Information */}
               {step === 1 && (
                 <div className="space-y-4">
