@@ -44,7 +44,7 @@ interface ResidentProfile {
   purok?: string
   barangayHall?: string
   hall?: string
-  dateOfBirth?: string
+  birthDate?: string
   civilStatus?: string
   emergencyContact?: string
   emergencyPhone?: string
@@ -68,30 +68,30 @@ export default function ProfilePage() {
       try {
         const me = await apiFetch('/auth/me');
         if (!me?.authenticated) { setIsLoading(false); return; }
-        setUser({ ...me.user,
-           name: `${me.user.firstName} ${me.user.lastName}`,
-           dateOfBirth: me.user.birthDate,
-           address: `${me.user.houseNumber}, ${me.user.street}, ${me.user.purok} ${me.user.barangayHall}`,
-           hall: me.user.barangayHall,
-           registrationDate: me.user.createdAt,
-          });
+        setUser({
+          ...me.user,
+          name: `${me.user.firstName} ${me.user.lastName}`,
+          address: `${me.user.houseNumber}, ${me.user.street}, ${me.user.purok} ${me.user.barangayHall}`,
+          hall: me.user.barangayHall,
+          registrationDate: me.user.createdAt,
+        });
         try {
           const prof = await apiFetch('/users/me');
           if (!cancelled && prof?.authenticated && prof.user) {
-            setProfile({ ...prof.user,
-           name: `${prof.user.firstName} ${prof.user.lastName}`,
-           dateOfBirth: prof.user.birthDate,
-           address: `${prof.user.houseNumber}, ${prof.user.street}, ${prof.user.purok} ${prof.user.barangayHall}`,
-           hall: prof.user.barangayHall,
-           registrationDate: prof.user.createdAt,
-          });
-            setEditedProfile({ ...prof.user,
-           name: `${prof.user.firstName} ${prof.user.lastName}`,
-           dateOfBirth: prof.user.birthDate,
-           address: `${prof.user.houseNumber}, ${prof.user.street}, ${prof.user.purok} ${prof.user.barangayHall}`,
-           hall: prof.user.barangayHall,
-           registrationDate: prof.user.createdAt,
-          });
+            setProfile({
+              ...prof.user,
+              name: `${prof.user.firstName} ${prof.user.lastName}`,
+              address: `${prof.user.houseNumber}, ${prof.user.street}, ${prof.user.purok} ${prof.user.barangayHall}`,
+              hall: prof.user.barangayHall,
+              registrationDate: prof.user.createdAt,
+            });
+            setEditedProfile({
+              ...prof.user,
+              name: `${prof.user.firstName} ${prof.user.lastName}`,
+              address: `${prof.user.houseNumber}, ${prof.user.street}, ${prof.user.purok} ${prof.user.barangayHall}`,
+              hall: prof.user.barangayHall,
+              registrationDate: prof.user.createdAt,
+            });
           }
         } catch { /* ignore */ }
       } catch { /* ignore */ }
@@ -105,31 +105,30 @@ export default function ProfilePage() {
   const handleEdit = () => setIsEditing(true)
 
   const handleSave = async () => {
-  if (!editedProfile) return;
-  try {
-    const payload = {
-      email: editedProfile.email,
-      firstName: editedProfile.firstName,
-      lastName: editedProfile.lastName,
-      phone: editedProfile.phone,
-      occupation: editedProfile.occupation,
-      houseNumber: editedProfile.houseNumber,
-      street: editedProfile.street,
-      purok: editedProfile.purok,
-      barangayHall: editedProfile.barangayHall,
-      civilStatus: editedProfile.civilStatus,
-      dateOfBirth: editedProfile.dateOfBirth,
-      emergencyContact: editedProfile.emergencyContact,
-      emergencyPhone: editedProfile.emergencyPhone,
-    };
-
+    if (!editedProfile) return;
+    try {
+      const payload = {
+        email: editedProfile.email,
+        firstName: editedProfile.firstName,
+        lastName: editedProfile.lastName,
+        phone: editedProfile.phone,
+        occupation: editedProfile.occupation,
+        houseNumber: editedProfile.houseNumber,
+        street: editedProfile.street,
+        purok: editedProfile.purok,
+        barangayHall: editedProfile.barangayHall,
+        civilStatus: editedProfile.civilStatus,
+        birthDate: editedProfile.birthDate,
+        emergencyContact: editedProfile.emergencyContact,
+        emergencyPhone: editedProfile.emergencyPhone,
+      };
       const res = await apiFetch('/users/me', {
         method: 'PATCH',
         body: JSON.stringify(payload),
       });
       if (res?.ok) {
-        setProfile(res.user);
-        setEditedProfile(res.user);
+        setProfile(prev => ({ ...prev, ...res.user }));
+        setEditedProfile(prev => ({ ...(prev || {}), ...res.user }));
         setUser((u: any) => ({ ...u, ...res.user }));
         setIsEditing(false);
         if (res.emailVerificationSent) toast.message('Verification required', { description: 'We sent a verification link to your new email.' });
@@ -258,7 +257,7 @@ export default function ProfilePage() {
                   {/* Avatar Section */}
                   <div className="flex items-center space-x-4 mb-6">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src={profile.avatar || "/placeholder.svg"} />
+                      <AvatarImage src={profile.avatar || "/placeholder.svg?height=40&width=40"} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-yellow-500 text-white text-xl font-bold">
                         {initials}
                       </AvatarFallback>
@@ -284,66 +283,145 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">Full Name</Label>
-{isEditing ? (
-  <Input id="name" value={(editedProfile?.fullName || `${editedProfile?.firstName || ""} ${editedProfile?.lastName || ""}`).trim()} disabled />
-) : (
-  <p className="mt-1 text-gray-900 font-medium">{(profile.fullName || `${profile.firstName || ""} ${profile.lastName || ""}` ).trim() || "—"}</p>
-)}
-</div>
+                      {isEditing ? (
+                        <Input
+                          id="name"
+                          value={editedProfile?.fullName || ""}
+                          onChange={(e) => handleInputChange("fullName", e.target.value)}
+                          disabled
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.fullName || "—"}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="firstName">First Name</Label>
+                      {isEditing ? (
+                        <Input id="firstName" value={editedProfile?.firstName || ""} onChange={(e) => handleInputChange("firstName", e.target.value)} />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.firstName || "—"}</p>
+                      )}
+                    </div>
 
-<div>
-  <Label htmlFor="firstName">First Name</Label>
-  {isEditing ? (
-    <Input id="firstName" value={editedProfile?.firstName || ""} onChange={(e)=>handleInputChange("firstName", e.target.value)} />
-  ) : (
-    <p className="mt-1 text-gray-900 font-medium">{profile.firstName || "—"}</p>
-  )}
-</div>
+                    <div>
+                      <Label htmlFor="lastName">Last Name</Label>
+                      {isEditing ? (
+                        <Input id="lastName" value={editedProfile?.lastName || ""} onChange={(e) => handleInputChange("lastName", e.target.value)} />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.lastName || "—"}</p>
+                      )}
+                    </div>
 
-<div>
-  <Label htmlFor="lastName">Last Name</Label>
-  {isEditing ? (
-    <Input id="lastName" value={editedProfile?.lastName || ""} onChange={(e)=>handleInputChange("lastName", e.target.value)} />
-  ) : (
-    <p className="mt-1 text-gray-900 font-medium">{profile.lastName || "—"}</p>
-  )}
-</div>
-</div>
+                    <div>
+                      <Label htmlFor="email">Email Address</Label>
+                      {isEditing ? (
+                        <Input
+                          id="email"
+                          type="email"
+                          value={editedProfile?.email || ""}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium flex items-center">
+                          <Mail className="h-4 w-4 mr-2 text-gray-500" />
+                          {profile.email || "—"}
+                        </p>
+                      )}
+                    </div>
 
+                    <div>
+                      <Label htmlFor="phone">Phone Number</Label>
+                      {isEditing ? (
+                        <Input
+                          id="phone"
+                          value={editedProfile?.phone || ""}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium flex items-center">
+                          <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                          {profile.phone || "—"}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="birthDate">Date of Birth</Label>
+                      {isEditing ? (
+                        <Input
+                          id="birthDate"
+                          type="date"
+                          value={editedProfile?.birthDate || ""}
+                          onChange={(e) => handleInputChange("birthDate", e.target.value)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium flex items-center">
+                          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                          {fmtDate(profile.birthDate)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="civilStatus">Civil Status</Label>
+                      {isEditing ? (
+                        <Input
+                          id="civilStatus"
+                          value={editedProfile?.civilStatus || ""}
+                          onChange={(e) => handleInputChange("civilStatus", e.target.value)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.civilStatus || "—"}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor="occupation">Occupation</Label>
+                      {isEditing ? (
+                        <Input
+                          id="occupation"
+                          value={editedProfile?.occupation || ""}
+                          onChange={(e) => handleInputChange("occupation", e.target.value)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.occupation || "—"}</p>
+                      )}
+                    </div>
+                  </div>
 
                   <div>
                     <Label htmlFor="address">Address</Label>
-{isEditing ? (
-  <Textarea id="address" value={(editedProfile?.address || "").toString()} disabled rows={2} />
-) : (
-  <p className="mt-1 text-gray-900 font-medium flex items-start">
-    <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
-    {profile.address || "—"}
-  </p>
-)}
+                    {isEditing ? (
+                      <Textarea id="address" value={(editedProfile?.address || "").toString()} disabled rows={2} />
+                    ) : (
+                      <p className="mt-1 text-gray-900 font-medium flex items-start">
+                        <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
+                        {profile.address || "—"}
+                      </p>
+                    )}
 
-{isEditing && (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-    <div>
-      <Label htmlFor="houseNumber">House Number</Label>
-      <Input id="houseNumber" value={editedProfile?.houseNumber || ""} onChange={(e)=>handleInputChange("houseNumber", e.target.value)} />
-    </div>
-    <div>
-      <Label htmlFor="street">Street</Label>
-      <Input id="street" value={editedProfile?.street || ""} onChange={(e)=>handleInputChange("street", e.target.value)} />
-    </div>
-    <div>
-      <Label htmlFor="purok">Purok</Label>
-      <Input id="purok" value={editedProfile?.purok || ""} onChange={(e)=>handleInputChange("purok", e.target.value)} />
-    </div>
-    <div>
-      <Label htmlFor="barangayHall">Barangay Hall</Label>
-      <Input id="barangayHall" value={editedProfile?.barangayHall || ""} onChange={(e)=>handleInputChange("barangayHall", e.target.value)} />
-    </div>
-  </div>
-)}
-</div>
-</CardContent>
+                    {isEditing && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                          <Label htmlFor="houseNumber">House Number</Label>
+                          <Input id="houseNumber" value={editedProfile?.houseNumber || ""} onChange={(e) => handleInputChange("houseNumber", e.target.value)} />
+                        </div>
+                        <div>
+                          <Label htmlFor="street">Street</Label>
+                          <Input id="street" value={editedProfile?.street || ""} onChange={(e) => handleInputChange("street", e.target.value)} />
+                        </div>
+                        <div>
+                          <Label htmlFor="purok">Purok</Label>
+                          <Input id="purok" value={editedProfile?.purok || ""} onChange={(e) => handleInputChange("purok", e.target.value)} />
+                        </div>
+                        <div>
+                          <Label htmlFor="barangayHall">Barangay Hall</Label>
+                          <Input id="barangayHall" value={editedProfile?.barangayHall || ""} onChange={(e) => handleInputChange("barangayHall", e.target.value)} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
 
               </Card>
 
