@@ -11,8 +11,9 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { QRCodeGenerator } from "@/components/qr-code-generator"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
 import {
-  User,
+  User as UserIcon,
   Mail,
   Phone,
   MapPin,
@@ -27,21 +28,24 @@ import {
   Camera,
 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
+import { da } from "date-fns/locale"
 
 interface ResidentProfile {
-  id: string
-  name: string
-  email: string
-  phone: string
-  address: string
-  hall: string
-  dateOfBirth: string
-  civilStatus: string
-  occupation: string
-  emergencyContact: string
-  emergencyPhone: string
-  registrationDate: string
-  residentId: string
+  id?: string
+  name?: string
+  firstName?: string
+  lastName?: string
+  email?: string
+  phone?: string
+  address?: string
+  hall?: string
+  dateOfBirth?: string
+  civilStatus?: string
+  occupation?: string
+  emergencyContact?: string
+  emergencyPhone?: string
+  registrationDate?: string
+  residentId?: string
   avatar?: string
 }
 
@@ -52,50 +56,78 @@ export default function ProfilePage() {
   const [editedProfile, setEditedProfile] = useState<ResidentProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Load current user & profile from API
   useEffect(() => {
-    // Get current user from localStorage
-    const currentUser = localStorage.getItem("currentUser")
-    if (currentUser) {
-      const userData = JSON.parse(currentUser)
-      setUser(userData)
-
-      // Mock profile data - in real app, fetch from API
-      const mockProfile: ResidentProfile = {
-        id: userData.id || "RES-001",
-        name: userData.name || "Maria Santos",
-        email: userData.email || "maria.santos@gmail.com",
-        phone: "+63 912 345 6789",
-        address: "123 Mango Street, Manggahan, Pasig City",
-        hall: userData.hall || "Hall 1",
-        dateOfBirth: "1990-05-15",
-        civilStatus: "Single",
-        occupation: "Teacher",
-        emergencyContact: "Juan Santos",
-        emergencyPhone: "+63 912 345 6788",
-        registrationDate: "2023-01-15",
-        residentId: `RES-${userData.id || "001"}`,
-        avatar: userData.avatar,
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (!me?.authenticated) { setIsLoading(false); return; }
+        setUser({ ...me.user,
+           name: `${me.user.firstName} ${me.user.lastName}`,
+           dateOfBirth: me.user.birthDate,
+           address: `${me.user.houseNumber}, ${me.user.street}, ${me.user.purok} ${me.user.barangayHall}`,
+           hall: me.user.barangayHall,
+           registrationDate: me.user.createdAt,
+          });
+        try {
+          const prof = await apiFetch('/users/me');
+          if (!cancelled && prof?.authenticated && prof.user) {
+            setProfile({ ...prof.user,
+           name: `${prof.user.firstName} ${prof.user.lastName}`,
+           dateOfBirth: prof.user.birthDate,
+           address: `${prof.user.houseNumber}, ${prof.user.street}, ${prof.user.purok} ${prof.user.barangayHall}`,
+           hall: prof.user.barangayHall,
+           registrationDate: prof.user.createdAt,
+          });
+            setEditedProfile({ ...prof.user,
+           name: `${prof.user.firstName} ${prof.user.lastName}`,
+           dateOfBirth: prof.user.birthDate,
+           address: `${prof.user.houseNumber}, ${prof.user.street}, ${prof.user.purok} ${prof.user.barangayHall}`,
+           hall: prof.user.barangayHall,
+           registrationDate: prof.user.createdAt,
+          });
+          }
+        } catch { /* ignore */ }
+      } catch { /* ignore */ }
+      finally {
+        if (!cancelled) setIsLoading(false);
       }
+    })();
+    return () => { cancelled = true };
+  }, []);
 
-      setProfile(mockProfile)
-      setEditedProfile(mockProfile)
-    }
-    setIsLoading(false)
-  }, [])
+  const handleEdit = () => setIsEditing(true)
 
-  const handleEdit = () => {
-    setIsEditing(true)
-  }
-
-  const handleSave = () => {
-    if (editedProfile) {
-      setProfile(editedProfile)
-      // Update localStorage
-      const updatedUser = { ...user, ...editedProfile }
-      localStorage.setItem("currentUser", JSON.stringify(updatedUser))
-      setUser(updatedUser)
-      setIsEditing(false)
-      toast.success("Profile updated successfully!")
+  const handleSave = async () => {
+    if (!editedProfile) return;
+    try {
+      const payload = {
+        name: editedProfile.name,
+        email: editedProfile.email,
+        phone: editedProfile.phone,
+        occupation: editedProfile.occupation,
+        address: editedProfile.address,
+        civilStatus: editedProfile.civilStatus,
+        dateOfBirth: editedProfile.dateOfBirth,
+        emergencyContact: editedProfile.emergencyContact,
+        emergencyPhone: editedProfile.emergencyPhone,
+      };
+      const res = await apiFetch('/users/me', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      if (res?.ok) {
+        setProfile(res.user);
+        setEditedProfile(res.user);
+        setUser((u: any) => ({ ...u, ...res.user }));
+        setIsEditing(false);
+        toast.success('Profile updated successfully!');
+      } else {
+        toast.error(res?.message || 'Unable to save changes');
+      }
+    } catch {
+      toast.error('Failed to save changes');
     }
   }
 
@@ -105,13 +137,11 @@ export default function ProfilePage() {
   }
 
   const handleInputChange = (field: keyof ResidentProfile, value: string) => {
-    if (editedProfile) {
-      setEditedProfile({ ...editedProfile, [field]: value })
-    }
+    setEditedProfile(prev => ({ ...(prev || {}), [field]: value }))
   }
 
   const copyQRCode = () => {
-    if (profile) {
+    if (profile?.residentId) {
       navigator.clipboard.writeText(profile.residentId)
       toast.success("Resident ID copied to clipboard!")
     }
@@ -121,11 +151,28 @@ export default function ProfilePage() {
     const canvas = document.querySelector("canvas")
     if (canvas) {
       const link = document.createElement("a")
-      link.download = `resident-qr-${profile?.residentId}.png`
-      link.href = canvas.toDataURL()
+      link.download = `resident-qr-${profile?.residentId || "id"}.png`
+      link.href = (canvas as HTMLCanvasElement).toDataURL()
       link.click()
       toast.success("QR Code downloaded!")
     }
+  }
+
+  // Safe initials for avatar (no .split on undefined)
+  const initials = (() => {
+    const rawName = typeof profile?.name === 'string' ? profile.name.trim() : ''
+    const hasEmail = typeof profile?.email === 'string' && profile.email.includes('@')
+    const fallback = hasEmail ? profile!.email!.slice(0, profile!.email!.indexOf('@')) : 'U'
+    const source = rawName || fallback
+    const parts = source ? source.split(/\s+/).filter(Boolean) : []
+    const letters = (parts.length ? parts.slice(0, 2) : [source]).map(p => (p?.[0] || '')).join('')
+    return (letters || 'U').toUpperCase()
+  })()
+
+  const fmtDate = (iso?: string) => {
+    if (!iso) return "—"
+    const d = new Date(iso)
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString()
   }
 
   if (isLoading) {
@@ -171,7 +218,7 @@ export default function ProfilePage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center space-x-2">
-                      <User className="h-5 w-5 text-blue-600" />
+                      <UserIcon className="h-5 w-5 text-blue-600" />
                       <span>Personal Information</span>
                     </CardTitle>
                     <CardDescription>Your basic personal details</CardDescription>
@@ -202,15 +249,14 @@ export default function ProfilePage() {
                     <Avatar className="h-20 w-20">
                       <AvatarImage src={profile.avatar || "/placeholder.svg"} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-yellow-500 text-white text-xl font-bold">
-                        {profile.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{profile.name}</h3>
-                      <p className="text-gray-600">Resident ID: {profile.residentId}</p>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {profile.name || profile.email || "Resident"}
+                      </h3>
+                      <p className="text-gray-600">Resident ID: {profile.residentId || "—"}</p>
                       <Badge className="bg-blue-100 text-blue-800 border-0 mt-1">
                         <Shield className="h-3 w-3 mr-1" />
                         Verified Resident
@@ -234,7 +280,7 @@ export default function ProfilePage() {
                           onChange={(e) => handleInputChange("name", e.target.value)}
                         />
                       ) : (
-                        <p className="mt-1 text-gray-900 font-medium">{profile.name}</p>
+                        <p className="mt-1 text-gray-900 font-medium">{profile.name || "—"}</p>
                       )}
                     </div>
 
@@ -250,7 +296,7 @@ export default function ProfilePage() {
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium flex items-center">
                           <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                          {profile.email}
+                          {profile.email || "—"}
                         </p>
                       )}
                     </div>
@@ -266,7 +312,7 @@ export default function ProfilePage() {
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium flex items-center">
                           <Phone className="h-4 w-4 mr-2 text-gray-500" />
-                          {profile.phone}
+                          {profile.phone || "—"}
                         </p>
                       )}
                     </div>
@@ -283,7 +329,7 @@ export default function ProfilePage() {
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium flex items-center">
                           <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-                          {new Date(profile.dateOfBirth).toLocaleDateString()}
+                          {fmtDate(profile.dateOfBirth)}
                         </p>
                       )}
                     </div>
@@ -297,7 +343,7 @@ export default function ProfilePage() {
                           onChange={(e) => handleInputChange("civilStatus", e.target.value)}
                         />
                       ) : (
-                        <p className="mt-1 text-gray-900 font-medium">{profile.civilStatus}</p>
+                        <p className="mt-1 text-gray-900 font-medium">{profile.civilStatus || "—"}</p>
                       )}
                     </div>
 
@@ -310,7 +356,7 @@ export default function ProfilePage() {
                           onChange={(e) => handleInputChange("occupation", e.target.value)}
                         />
                       ) : (
-                        <p className="mt-1 text-gray-900 font-medium">{profile.occupation}</p>
+                        <p className="mt-1 text-gray-900 font-medium">{profile.occupation || "—"}</p>
                       )}
                     </div>
                   </div>
@@ -327,7 +373,7 @@ export default function ProfilePage() {
                     ) : (
                       <p className="mt-1 text-gray-900 font-medium flex items-start">
                         <MapPin className="h-4 w-4 mr-2 text-gray-500 mt-0.5" />
-                        {profile.address}
+                        {profile.address || "—"}
                       </p>
                     )}
                   </div>
@@ -354,7 +400,7 @@ export default function ProfilePage() {
                           onChange={(e) => handleInputChange("emergencyContact", e.target.value)}
                         />
                       ) : (
-                        <p className="mt-1 text-gray-900 font-medium">{profile.emergencyContact}</p>
+                        <p className="mt-1 text-gray-900 font-medium">{profile.emergencyContact || "—"}</p>
                       )}
                     </div>
 
@@ -367,7 +413,7 @@ export default function ProfilePage() {
                           onChange={(e) => handleInputChange("emergencyPhone", e.target.value)}
                         />
                       ) : (
-                        <p className="mt-1 text-gray-900 font-medium">{profile.emergencyPhone}</p>
+                        <p className="mt-1 text-gray-900 font-medium">{profile.emergencyPhone || "—"}</p>
                       )}
                     </div>
                   </div>
@@ -388,12 +434,12 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
                   <div className="flex justify-center">
-                    <QRCodeGenerator value={profile.residentId} size={200} />
+                    <QRCodeGenerator value={profile.residentId || user?.id || user?.email || "RESIDENT"} size={200} />
                   </div>
 
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-sm text-gray-600 mb-1">Resident ID</p>
-                    <p className="font-mono text-lg font-bold text-gray-900">{profile.residentId}</p>
+                    <p className="font-mono text-lg font-bold text-gray-900">{profile.residentId || "—"}</p>
                   </div>
 
                   <div className="flex space-x-2">
@@ -426,13 +472,13 @@ export default function ProfilePage() {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Hall Assignment</span>
-                    <Badge className="bg-blue-100 text-blue-800 border-0">{profile.hall}</Badge>
+                    <Badge className="bg-blue-100 text-blue-800 border-0">{profile.hall || "—"}</Badge>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Registration Date</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {new Date(profile.registrationDate).toLocaleDateString()}
+                      {fmtDate(profile.registrationDate)}
                     </span>
                   </div>
 
