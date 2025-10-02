@@ -17,6 +17,8 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     // Personal Information
     firstName: "",
@@ -66,6 +68,30 @@ export default function RegisterPage() {
            formData.termsAccepted &&
            formData.privacyAccepted
   }
+
+    const handleResendVerification = async () => {
+  try {
+    setResendMessage(null)
+    setResendLoading(true)
+
+      const resp = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: formData.email }),
+      });      
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(()=>({}))
+      throw new Error(err?.error?.message || err?.message || 'Failed to resend verification email')
+    }
+    setResendMessage('Verification email sent. Please check your inbox.')
+  } catch (e: any) {
+    setResendMessage(e.message || 'Failed to resend verification email')
+  } finally {
+    setResendLoading(false)
+  }
+}
 
   const handleNext = () => {
     setError("")
@@ -513,6 +539,18 @@ export default function RegisterPage() {
                       Go to Login
                     </Button>
                   </Link>
+                  <div className="text-sm text-muted-foreground mt-2">
+                  Did not receive email?{" "}
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    className="underline"
+                    disabled={resendLoading}
+                  >
+                    {resendLoading ? "Resending..." : "Resend"}
+                  </button>
+                </div>
+                {resendMessage && <p className="text-xs mt-2">{resendMessage}</p>}
                 </div>
               )}
 
