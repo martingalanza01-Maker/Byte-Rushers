@@ -16,7 +16,6 @@ import {
   Bell,
   Menu,
   User,
-  Settings,
   LogOut,
   Shield,
   FileText,
@@ -241,12 +240,13 @@ export function Navbar({ user }: NavbarProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center space-x-2">
-                  <Settings className="h-4 w-4" />
-                  <span>Settings</span>
+                  <Link
+                    href={user.type === "staff" ? "/staff/profile" : "/resident/profile"}
+                    className="flex items-center space-x-2"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
