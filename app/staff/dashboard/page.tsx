@@ -1,9 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-
-import { apiFetch } from "@/lib/api"
-
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -26,9 +22,13 @@ import {
   Award,
   BarChart3,
   Calendar,
+  Megaphone,
 } from "lucide-react"
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
+import { DocumentRequest } from "@/components/document-request"
+import { Complaints } from "@/components/complaints"
+import { CreateAnnouncement } from "@/components/create-announcement"
 import Image from "next/image"
 
 export default function StaffDashboard() {
@@ -41,6 +41,8 @@ export default function StaffDashboard() {
     hall: "Napico Hall",
     employeeId: "EMP-2024-001",
   })
+
+  const [currentView, setCurrentView] = useState("dashboard")
 
   const [stats, setStats] = useState({
     totalResidents: 0,
@@ -83,6 +85,33 @@ export default function StaffDashboard() {
 
   const [quickActions] = useState([
     {
+      title: "Create Announcement",
+      description: "Post new announcements for residents",
+      icon: Megaphone,
+      color: "from-orange-500 to-orange-600",
+      bgColor: "from-orange-50 to-orange-100",
+      action: () => setCurrentView("announcements"),
+      featured: true,
+    },
+    {
+      title: "Process Requests",
+      description: "Handle resident document requests",
+      icon: FileText,
+      color: "from-green-500 to-green-600",
+      bgColor: "from-green-50 to-green-100",
+      action: () => setCurrentView("requests"),
+      featured: true,
+    },
+    {
+      title: "Manage Complaints",
+      description: "Review and resolve complaints",
+      icon: MessageSquare,
+      color: "from-red-500 to-red-600",
+      bgColor: "from-red-50 to-red-100",
+      action: () => setCurrentView("complaints"),
+      featured: true,
+    },
+    {
       title: "ML Analytics",
       description: "AI-powered insights and predictions",
       icon: Brain,
@@ -98,46 +127,12 @@ export default function StaffDashboard() {
       color: "from-blue-500 to-blue-600",
       bgColor: "from-blue-50 to-blue-100",
       link: "/staff/documents/verify",
-      featured: true,
-    },
-    {
-      title: "Process Requests",
-      description: "Handle resident document requests",
-      icon: FileText,
-      color: "from-green-500 to-green-600",
-      bgColor: "from-green-50 to-green-100",
-      link: "/staff/requests",
-      featured: false,
-    },
-    {
-      title: "Manage Complaints",
-      description: "Review and resolve complaints",
-      icon: MessageSquare,
-      color: "from-red-500 to-red-600",
-      bgColor: "from-red-50 to-red-100",
-      link: "/staff/complaints",
       featured: false,
     },
   ])
 
   // Animate stats on load
-  
-  const router = useRouter();
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const me = await apiFetch('/auth/me');
-        if (cancelled) return;
-        if (!me?.authenticated) { router.replace('/'); return; }
-        const t = String(me.user?.type || 'resident').toLowerCase();
-        if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
-      } catch { router.replace('/'); }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-useEffect(() => {
     const targetStats = {
       totalResidents: 15420,
       pendingRequests: 23,
@@ -172,8 +167,10 @@ useEffect(() => {
       }, stepDuration)
     }
 
-    animateStats()
-  }, [])
+    if (currentView === "dashboard") {
+      animateStats()
+    }
+  }, [currentView])
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -212,6 +209,59 @@ useEffect(() => {
       default:
         return <Activity className="h-4 w-4" />
     }
+  }
+
+  const handleNavigation = (page: string) => {
+    setCurrentView(page)
+  }
+
+  // Render different views based on currentView
+  if (currentView === "requests") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
+        <Navbar user={user} />
+        <div className="pt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+            <Button variant="outline" onClick={() => setCurrentView("dashboard")} className="mb-4">
+              ← Back to Dashboard
+            </Button>
+          </div>
+          <DocumentRequest user={user} onNavigate={handleNavigation} />
+        </div>
+      </div>
+    )
+  }
+
+  if (currentView === "complaints") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
+        <Navbar user={user} />
+        <div className="pt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+            <Button variant="outline" onClick={() => setCurrentView("dashboard")} className="mb-4">
+              ← Back to Dashboard
+            </Button>
+          </div>
+          <Complaints user={user} onNavigate={handleNavigation} />
+        </div>
+      </div>
+    )
+  }
+
+  if (currentView === "announcements") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-yellow-50 to-white">
+        <Navbar user={user} />
+        <div className="pt-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+            <Button variant="outline" onClick={() => setCurrentView("dashboard")} className="mb-4">
+              ← Back to Dashboard
+            </Button>
+          </div>
+          <CreateAnnouncement user={user} onNavigate={handleNavigation} />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -297,27 +347,54 @@ useEffect(() => {
               {quickActions.map((action, index) => {
                 const Icon = action.icon
                 return (
-                  <Link key={index} href={action.link}>
-                    <Card className="border-0 shadow-lg card-hover bg-gradient-to-br from-white to-gray-50 h-full relative">
-                      {action.featured && (
-                        <div className="absolute -top-2 -right-2 z-10">
-                          <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border-0 shadow-lg">
-                            <Star className="h-3 w-3 mr-1" />
-                            Featured
-                          </Badge>
-                        </div>
-                      )}
-                      <CardContent className="p-6">
-                        <div
-                          className={`w-16 h-16 bg-gradient-to-br ${action.color} rounded-2xl flex items-center justify-center mb-4 animate-float`}
-                        >
-                          <Icon className="h-8 w-8 text-white" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-800 mb-2">{action.title}</h3>
-                        <p className="text-gray-600 text-sm leading-relaxed">{action.description}</p>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                  <div key={index}>
+                    {action.link ? (
+                      <Link href={action.link}>
+                        <Card className="border-0 shadow-lg card-hover bg-gradient-to-br from-white to-gray-50 h-full relative cursor-pointer">
+                          {action.featured && (
+                            <div className="absolute -top-2 -right-2 z-10">
+                              <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border-0 shadow-lg">
+                                <Star className="h-3 w-3 mr-1" />
+                                Featured
+                              </Badge>
+                            </div>
+                          )}
+                          <CardContent className="p-6">
+                            <div
+                              className={`w-16 h-16 bg-gradient-to-br ${action.color} rounded-2xl flex items-center justify-center mb-4 animate-float`}
+                            >
+                              <Icon className="h-8 w-8 text-white" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">{action.title}</h3>
+                            <p className="text-gray-600 text-sm leading-relaxed">{action.description}</p>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ) : (
+                      <Card
+                        className="border-0 shadow-lg card-hover bg-gradient-to-br from-white to-gray-50 h-full relative cursor-pointer"
+                        onClick={action.action}
+                      >
+                        {action.featured && (
+                          <div className="absolute -top-2 -right-2 z-10">
+                            <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-yellow-900 border-0 shadow-lg">
+                              <Star className="h-3 w-3 mr-1" />
+                              Featured
+                            </Badge>
+                          </div>
+                        )}
+                        <CardContent className="p-6">
+                          <div
+                            className={`w-16 h-16 bg-gradient-to-br ${action.color} rounded-2xl flex items-center justify-center mb-4 animate-float`}
+                          >
+                            <Icon className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className="text-lg font-bold text-gray-800 mb-2">{action.title}</h3>
+                          <p className="text-gray-600 text-sm leading-relaxed">{action.description}</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 )
               })}
             </div>
@@ -492,6 +569,14 @@ useEffect(() => {
                 <CardContent className="space-y-3">
                   <Button
                     variant="outline"
+                    className="w-full justify-start border-orange-200 text-orange-600 hover:bg-orange-50 bg-transparent"
+                    onClick={() => setCurrentView("announcements")}
+                  >
+                    <Megaphone className="h-4 w-4 mr-3" />
+                    Create Announcement
+                  </Button>
+                  <Button
+                    variant="outline"
                     className="w-full justify-start border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
                   >
                     <Shield className="h-4 w-4 mr-3" />
@@ -500,16 +585,18 @@ useEffect(() => {
                   <Button
                     variant="outline"
                     className="w-full justify-start border-green-200 text-green-600 hover:bg-green-50 bg-transparent"
+                    onClick={() => setCurrentView("requests")}
                   >
                     <FileText className="h-4 w-4 mr-3" />
-                    Generate Document
+                    Process Requests
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full justify-start border-red-200 text-red-600 hover:bg-red-50 bg-transparent"
+                    onClick={() => setCurrentView("complaints")}
                   >
-                    <AlertTriangle className="h-4 w-4 mr-3" />
-                    Emergency Alert
+                    <MessageSquare className="h-4 w-4 mr-3" />
+                    Manage Complaints
                   </Button>
                   <Button
                     variant="outline"
