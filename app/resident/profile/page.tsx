@@ -1,5 +1,5 @@
 "use client"
-
+import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,7 +28,6 @@ import {
   Camera,
 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
-import { da } from "date-fns/locale"
 
 interface ResidentProfile {
   id?: string
@@ -60,6 +59,21 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [editedProfile, setEditedProfile] = useState<ResidentProfile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  const router = useRouter()
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (cancelled) return;
+        if (!me?.authenticated) { router.replace('/'); return; }
+        const t = String(me.user?.type || 'resident').toLowerCase();
+        if (t !== 'resident') { router.replace('/staff/dashboard'); return; }
+      } catch { router.replace('/'); }
+    })();
+    return () => { cancelled = true as any; };
+  }, []);
 
   // Load current user & profile from API
   useEffect(() => {
