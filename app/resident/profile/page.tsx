@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -50,6 +51,8 @@ interface ResidentProfile {
   registrationDate?: string
   residentId?: string
   avatar?: string
+  middleName?: string
+  emailVerified?: boolean
 }
 
 
@@ -120,8 +123,25 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (!editedProfile) return;
+    // Client-side required validation
+    const requiredFields = {
+      firstName: editedProfile.firstName,
+      lastName: editedProfile.lastName,
+      email: editedProfile.email,
+      phone: editedProfile.phone,
+      civilStatus: editedProfile.civilStatus,
+      purok: editedProfile.purok,
+      barangayHall: editedProfile.barangayHall,
+      houseNumber: editedProfile.houseNumber,
+      street: editedProfile.street,
+    } as Record<string, any>;
+    for (const [k,v] of Object.entries(requiredFields)) {
+      if (!v || String(v).trim() === '') { toast.error(`Please complete the required field: ${k}`); return; }
+    }
+    if (!editedProfile) return;
     try {
       const payload = {
+        middleName: editedProfile.middleName,
         email: editedProfile.email,
         firstName: editedProfile.firstName,
         lastName: editedProfile.lastName,
@@ -271,7 +291,7 @@ export default function ProfilePage() {
                   {/* Avatar Section */}
                   <div className="flex items-center space-x-4 mb-6">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage src={profile.avatar || "/placeholder.svg?height=40&width=40"} />
+                      <AvatarImage src={profile.avatar || "/placeholder.svg"} />
                       <AvatarFallback className="bg-gradient-to-br from-blue-500 to-yellow-500 text-white text-xl font-bold">
                         {initials}
                       </AvatarFallback>
@@ -311,16 +331,24 @@ export default function ProfilePage() {
                     <div>
                       <Label htmlFor="firstName">First Name</Label>
                       {isEditing ? (
-                        <Input id="firstName" value={editedProfile?.firstName || ""} onChange={(e) => handleInputChange("firstName", e.target.value)} />
+                        <Input id="firstName" value={editedProfile?.firstName || ""} onChange={(e) => handleInputChange("firstName", e.target.value)} required/>
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium">{profile.firstName || "—"}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="middleName">Middle Name</Label>
+                      {isEditing ? (
+                        <Input id="middleName" value={editedProfile?.middleName || ""} onChange={(e)=>handleInputChange("middleName", e.target.value)} />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.middleName || "—"}</p>
                       )}
                     </div>
 
                     <div>
                       <Label htmlFor="lastName">Last Name</Label>
                       {isEditing ? (
-                        <Input id="lastName" value={editedProfile?.lastName || ""} onChange={(e) => handleInputChange("lastName", e.target.value)} />
+                        <Input id="lastName" value={editedProfile?.lastName || ""} onChange={(e) => handleInputChange("lastName", e.target.value)} required/>
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium">{profile.lastName || "—"}</p>
                       )}
@@ -334,6 +362,7 @@ export default function ProfilePage() {
                           type="email"
                           value={editedProfile?.email || ""}
                           onChange={(e) => handleInputChange("email", e.target.value)}
+                          required
                         />
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium flex items-center">
@@ -350,6 +379,7 @@ export default function ProfilePage() {
                           id="phone"
                           value={editedProfile?.phone || ""}
                           onChange={(e) => handleInputChange("phone", e.target.value)}
+                          required
                         />
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium flex items-center">
@@ -367,6 +397,7 @@ export default function ProfilePage() {
                           type="date"
                           value={editedProfile?.birthDate || ""}
                           onChange={(e) => handleInputChange("birthDate", e.target.value)}
+                          required
                         />
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium flex items-center">
@@ -379,11 +410,17 @@ export default function ProfilePage() {
                     <div>
                       <Label htmlFor="civilStatus">Civil Status</Label>
                       {isEditing ? (
-                        <Input
-                          id="civilStatus"
-                          value={editedProfile?.civilStatus || ""}
-                          onChange={(e) => handleInputChange("civilStatus", e.target.value)}
-                        />
+                        <Select value={editedProfile?.civilStatus || ""} onValueChange={(value)=>handleInputChange("civilStatus", value)} required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="single">Single</SelectItem>
+                            <SelectItem value="married">Married</SelectItem>
+                            <SelectItem value="divorced">Divorced</SelectItem>
+                            <SelectItem value="widowed">Widowed</SelectItem>
+                          </SelectContent>
+                        </Select>
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium">{profile.civilStatus || "—"}</p>
                       )}
@@ -418,19 +455,40 @@ export default function ProfilePage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
                           <Label htmlFor="houseNumber">House Number</Label>
-                          <Input id="houseNumber" value={editedProfile?.houseNumber || ""} onChange={(e) => handleInputChange("houseNumber", e.target.value)} />
+                          <Input id="houseNumber" value={editedProfile?.houseNumber || ""} onChange={(e) => handleInputChange("houseNumber", e.target.value)} required/>
                         </div>
                         <div>
                           <Label htmlFor="street">Street</Label>
-                          <Input id="street" value={editedProfile?.street || ""} onChange={(e) => handleInputChange("street", e.target.value)} />
+                          <Input id="street" value={editedProfile?.street || ""} onChange={(e) => handleInputChange("street", e.target.value)} required/>
                         </div>
                         <div>
                           <Label htmlFor="purok">Purok</Label>
-                          <Input id="purok" value={editedProfile?.purok || ""} onChange={(e) => handleInputChange("purok", e.target.value)} />
+                          <Select value={editedProfile?.purok || ""} onValueChange={(value)=>handleInputChange("purok", value)} required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select purok" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="purok-1">Purok 1</SelectItem>
+                            <SelectItem value="purok-2">Purok 2</SelectItem>
+                            <SelectItem value="purok-3">Purok 3</SelectItem>
+                            <SelectItem value="purok-4">Purok 4</SelectItem>
+                            <SelectItem value="purok-5">Purok 5</SelectItem>
+                          </SelectContent>
+                        </Select>
                         </div>
                         <div>
                           <Label htmlFor="barangayHall">Barangay Hall</Label>
-                          <Input id="barangayHall" value={editedProfile?.barangayHall || ""} onChange={(e) => handleInputChange("barangayHall", e.target.value)} />
+                          <Select value={editedProfile?.barangayHall || ""} onValueChange={(value)=>handleInputChange("barangayHall", value)} required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select purok" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="napico">Napico Hall</SelectItem>
+                            <SelectItem value="greenpark">Greenpark Hall</SelectItem>
+                            <SelectItem value="karangalan">Karangalan Hall</SelectItem>
+                            <SelectItem value="manggahan-proper">Manggahan Proper Hall</SelectItem>
+                          </SelectContent>
+                        </Select>
                         </div>
                       </div>
                     )}
@@ -543,17 +601,33 @@ export default function ProfilePage() {
 
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Account Status</span>
-                    <Badge className="bg-green-100 text-green-800 border-0">
-                      <Shield className="h-3 w-3 mr-1" />
-                      Verified
-                    </Badge>
+                    {profile.emailVerified ? (
+                      <Badge className="bg-green-100 text-green-800 border-0">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Verified
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-100 text-red-800 border-0">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Not Verified
+                      </Badge>
+                    )}
                   </div>
 
                   <Separator />
 
                   <div className="text-xs text-gray-500 space-y-1">
-                    <p>• Your account is verified and active</p>
-                    <p>• All services are available to you</p>
+                    {profile.emailVerified ? (
+                      <>
+                        <p>• Your account is verified and active</p>
+                        <p>• All services are available to you</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>• Your email is not verified yet</p>
+                        <p>• Some services may be limited until verification</p>
+                      </>
+                    )}
                     <p>• Contact barangay office for any issues</p>
                   </div>
                 </CardContent>
