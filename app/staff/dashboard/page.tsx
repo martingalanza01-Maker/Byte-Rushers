@@ -43,6 +43,22 @@ export default function StaffDashboard() {
       hall: "Napico Hall",
       employeeId: "EMP-2024-001",
     })
+  const [greeting, setGreeting] = useState("Hello");
+  const [greetingEmoji, setGreetingEmoji] = useState("👋");
+  useEffect(() => {
+    try {
+      const hour = new Date().getHours();
+      let g = "Hello";
+      let e = "👋";
+      if (hour < 12) { g = "Good morning"; e = "🌅"; }
+      else if (hour < 18) { g = "Good afternoon"; e = "🌤️"; }
+      else if (hour < 22) { g = "Good evening"; e = "🌆"; }
+      else { g = "Good night"; e = "🌙"; }
+      setGreeting(g);
+      setGreetingEmoji(e);
+    } catch {}
+  }, []);
+
     const router = useRouter();
     useEffect(() => {
       let cancelled = false;
@@ -76,8 +92,7 @@ export default function StaffDashboard() {
     documentsProcessed: 0,
     responseTime: 0,
   })
-
-  const [recentTasks] = useState([
+const [recentTasks] = useState([
     {
       id: 1,
       type: "document",
@@ -314,7 +329,7 @@ export default function StaffDashboard() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-center w-full md:text-left md:w-auto">
-                    <h1 className="text-3xl font-bold mb-2">Good morning, {user.name}! 🌅</h1>
+                    <h1 className="text-3xl font-bold mb-2">{greeting}, {user.name}! {greetingEmoji}</h1>
                     <p className="text-blue-100 text-lg mb-2">
                       {user.position} • {user.hall}
                     </p>
