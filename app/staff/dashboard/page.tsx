@@ -34,6 +34,15 @@ import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 
 export default function StaffDashboard() {
+    const [user, setUser] = useState({
+      name: "Juan Dela Cruz",
+      email: "juan.delacruz@manggahan.gov.ph",
+      avatar: "/placeholder.svg?height=40&width=40",
+      type: "staff" as const,
+      position: "Barangay Secretary",
+      hall: "Napico Hall",
+      employeeId: "EMP-2024-001",
+    })
     const router = useRouter();
     useEffect(() => {
       let cancelled = false;
@@ -44,20 +53,18 @@ export default function StaffDashboard() {
           if (!me?.authenticated) { router.replace('/'); return; }
           const t = String(me.user?.type || 'staff').toLowerCase();
           if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
+          setUser(prev => ({ 
+            ...prev, 
+            name: `${me.user?.firstName || ''} ${me.user?.lastName || ''}` || prev.name,
+            email: me.user?.email || prev.email,  
+            position: me.user?.occupation || prev.position,
+            hall: me.user?.hall || prev.hall,
+            employeeId: me.user?.staffId || prev.employeeId,
+          }));
         } catch { router.replace('/'); }
       })();
       return () => { cancelled = true as any; };
     }, []);
-
-  const [user] = useState({
-    name: "Juan Dela Cruz",
-    email: "juan.delacruz@manggahan.gov.ph",
-    avatar: "/placeholder.svg?height=40&width=40",
-    type: "staff" as const,
-    position: "Barangay Secretary",
-    hall: "Napico Hall",
-    employeeId: "EMP-2024-001",
-  })
 
   const [currentView, setCurrentView] = useState("dashboard")
 
