@@ -32,6 +32,8 @@ import {
   Megaphone,
 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
+import { useRouter } from "next/navigation"
+import { apiFetch } from "@/lib/api"
 
 interface StaffSettings {
   notifications: {
@@ -74,6 +76,20 @@ interface StaffSettings {
 }
 
 export default function StaffSettingsPage() {
+      const router = useRouter();
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const me = await apiFetch('/auth/me');
+          if (cancelled) return;
+          if (!me?.authenticated) { router.replace('/'); return; }
+          const t = String(me.user?.type || 'staff').toLowerCase();
+          if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
+        } catch { router.replace('/'); }
+      })();
+      return () => { cancelled = true as any; };
+    }, []);
   const [user, setUser] = useState<any>(null)
   const [settings, setSettings] = useState<StaffSettings>({
     notifications: {

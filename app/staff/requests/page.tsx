@@ -2,8 +2,25 @@
 
 import { DocumentRequest } from "@/components/document-request"
 import { Navbar } from "@/components/navbar"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { apiFetch } from "@/lib/api"
 
 export default function StaffRequestsPage() {
+      const router = useRouter();
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const me = await apiFetch('/auth/me');
+          if (cancelled) return;
+          if (!me?.authenticated) { router.replace('/'); return; }
+          const t = String(me.user?.type || 'staff').toLowerCase();
+          if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
+        } catch { router.replace('/'); }
+      })();
+      return () => { cancelled = true as any; };
+    }, []);
   const user = {
     name: "Juan Dela Cruz",
     email: "juan.delacruz@manggahan.gov.ph",

@@ -10,8 +10,25 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { QRCodeScanner } from "@/components/qr-code-scanner"
 import { QrCode, CheckCircle, XCircle, User, FileText, Calendar, MapPin, AlertTriangle, Camera, Search } from 'lucide-react'
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+import { apiFetch } from "@/lib/api"
 
 export default function DocumentVerifyPage() {
+    const router = useRouter();
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const me = await apiFetch('/auth/me');
+          if (cancelled) return;
+          if (!me?.authenticated) { router.replace('/'); return; }
+          const t = String(me.user?.type || 'staff').toLowerCase();
+          if (t !== 'staff') { router.replace('/resident/dashboard'); return; }
+        } catch { router.replace('/'); }
+      })();
+      return () => { cancelled = true as any; };
+    }, []);
   const [showScanner, setShowScanner] = useState(false)
   const [verificationResult, setVerificationResult] = useState<any>(null)
   const [manualCode, setManualCode] = useState("")
