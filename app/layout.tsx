@@ -24,6 +24,7 @@ html {
   --font-mono: ${GeistMono.variable};
 }
         `}</style>
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body>{children}</body>
     </html>
