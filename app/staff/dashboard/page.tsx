@@ -90,7 +90,6 @@ export default function StaffDashboard() {
     completedToday: 0,
     activeComplaints: 0,
     documentsProcessed: 0,
-    responseTime: 0,
   })
 const [recentTasks] = useState([
     {
@@ -172,14 +171,29 @@ const [recentTasks] = useState([
 
   // Animate stats on load
   useEffect(() => {
-    const targetStats = {
-      totalResidents: 15420,
-      pendingRequests: 23,
-      completedToday: 47,
-      activeComplaints: 12,
-      documentsProcessed: 156,
-      responseTime: 2.4,
+    let stats = {
+      totalResidents: 0,
+      pendingRequests: 0,
+      completedToday: 0,
+      activeComplaints: 0,
+      documentsProcessed: 0,
+    };
+    const fetchStats = async () => {
+      try {
+        const data = await apiFetch("/stats/dashboard/staff")
+        stats = {
+          totalResidents: Number(data?.totalResidents || 0),
+          pendingRequests: Number(data?.pending || 0),
+          completedToday: Number(data?.completedToday || 0),
+          activeComplaints: Number(data?.activeIssue || 0),
+          documentsProcessed: Number(data?.documents || 0),
+        }
+      } catch {
+        // optionally toast error, but silently ignore is fine for now
+      }
     }
+
+    fetchStats()
 
     const animateStats = () => {
       const duration = 2000
@@ -192,12 +206,11 @@ const [recentTasks] = useState([
         const progress = step / steps
 
         setStats({
-          totalResidents: Math.floor(targetStats.totalResidents * progress),
-          pendingRequests: Math.floor(targetStats.pendingRequests * progress),
-          completedToday: Math.floor(targetStats.completedToday * progress),
-          activeComplaints: Math.floor(targetStats.activeComplaints * progress),
-          documentsProcessed: Math.floor(targetStats.documentsProcessed * progress),
-          responseTime: Math.round(targetStats.responseTime * progress * 10) / 10,
+          totalResidents: Math.floor(stats.totalResidents * progress),
+          pendingRequests: Math.floor(stats.pendingRequests * progress),
+          completedToday: Math.floor(stats.completedToday * progress),
+          activeComplaints: Math.floor(stats.activeComplaints * progress),
+          documentsProcessed: Math.floor(stats.documentsProcessed * progress),
         })
 
         if (step >= steps) {
@@ -342,7 +355,7 @@ const [recentTasks] = useState([
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-8">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                     <div className="text-2xl font-bold">{stats.totalResidents.toLocaleString()}</div>
                     <div className="text-sm text-blue-100">Total Residents</div>
@@ -362,10 +375,6 @@ const [recentTasks] = useState([
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
                     <div className="text-2xl font-bold">{stats.documentsProcessed}</div>
                     <div className="text-sm text-blue-100">Documents</div>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <div className="text-2xl font-bold">{stats.responseTime}h</div>
-                    <div className="text-sm text-blue-100">Avg Response</div>
                   </div>
                 </div>
               </div>
