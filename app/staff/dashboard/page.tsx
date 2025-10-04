@@ -504,52 +504,6 @@ const [recentTasks] = useState([
 
             {/* Right Column - Performance & Tools */}
             <div className="space-y-6">
-              {/* Performance Card */}
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-green-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-3 text-green-800">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="h-5 w-5 text-white" />
-                    </div>
-                    <span>Performance</span>
-                  </CardTitle>
-                  <CardDescription>Your efficiency metrics this month</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">Task Completion Rate</span>
-                      <span className="text-sm font-bold text-green-600">94%</span>
-                    </div>
-                    <Progress value={94} className="h-2" />
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-600">Response Time</span>
-                      <span className="text-sm font-bold text-blue-600">Excellent</span>
-                    </div>
-                    <Progress value={88} className="h-2" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-4">
-                    <div className="text-center p-3 bg-green-50 rounded-xl">
-                      <div className="text-lg font-bold text-green-700">156</div>
-                      <div className="text-xs text-green-600">Documents Processed</div>
-                    </div>
-                    <div className="text-center p-3 bg-blue-50 rounded-xl">
-                      <div className="text-lg font-bold text-blue-700">2.4h</div>
-                      <div className="text-xs text-blue-600">Avg Response Time</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center space-x-2 pt-4 border-t border-green-200">
-                    <Award className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm font-medium text-gray-700">Top Performer This Month</span>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* AI Insights */}
               <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-purple-50">
                 <CardHeader>
