@@ -73,6 +73,39 @@ const [user, setUser] = useState({
   })
 
 
+  
+  const downloadSubmissionQR = async (id: string | number, title?: string) => {
+    try {
+      const res = await fetch(`/api/submissions/${String(id)}/qr`, { method: 'GET' });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Failed to generate QR (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(title || 'Document').replace(/[^a-z0-9-_]/gi,'_')}-QR.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download QR error', err);
+      alert('Unable to download QR. Please try again later.');
+    }
+  };
+
+  // Helpers for Recent Activity typing inconsistencies
+  const isDocumentActivity = (activity: any) => {
+    const t = (activity?.type || activity?.submissionType || "").toString().toLowerCase();
+    return t.includes("document");
+  };
+  const getActivityId = (activity: any): string => {
+    const id = activity?.id ?? activity?._id ?? activity?.documentReqId ?? activity?.documentId;
+    return String(id ?? "");
+  };
+
   const [recentActivity, setRecentActivity] = useState([
     {
       id: 1,
@@ -418,6 +451,13 @@ const [user, setUser] = useState({
                           <div className="flex items-center text-xs text-gray-500">
                             <Calendar className="h-3 w-3 mr-1" />
                             {new Date(activity.date).toLocaleDateString()}
+                          {isDocumentActivity(activity) && (
+                            <div className="mt-2">
+                              <Button size="sm" variant="outline" onClick={() => downloadSubmissionQR(getActivityId(activity), activity.title)}>
+                                Download QR
+                              </Button>
+                            </div>
+                          )}
                           </div>
                         </div>
                       </div>
