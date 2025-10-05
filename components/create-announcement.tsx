@@ -33,8 +33,6 @@ import {
 import {format} from "date-fns";
 import { apiFetch } from "@/lib/api";
 
-
-
 interface CreateAnnouncementProps {
   user: { name: string; position: string; hall: string; email?: string };
   onNavigate?: (page: string) => void;
@@ -56,8 +54,8 @@ type FormData = {
 };
 
 type AnnouncementDTO = {
-  id?: string;            // <-- make optional
-  _id?: string;           // <-- handle Mongo-style id just in case
+  id?: any;
+  _id?: any;
   title?: string;
   content?: string;
   category?: string;
@@ -75,7 +73,6 @@ type AnnouncementDTO = {
   updatedAt?: string;
 };
 
-// Normalized shape used in dropdown
 type DraftOption = {
   id: string;
   title: string;
@@ -83,21 +80,23 @@ type DraftOption = {
   isScheduled: boolean;
 };
 
-function normalizeDrafts(rows: AnnouncementDTO[]): DraftOption[] {
-  return rows
-    .map((r) => {
-      const id = (r.id || (r as any)._id || "").toString();
-      if (!id) return null;
-      const title = (r.title?.trim() || "(Untitled)");
-      const isScheduled = !!r.publishedSchedule;
-      const updatedAtLabel = r.updatedAt
-        ? new Date(r.updatedAt).toLocaleString()
-        : "";
-      return { id, title, updatedAtLabel, isScheduled };
-    })
-    .filter(Boolean) as DraftOption[];
+// ---- Helper that works with either Response-like or raw JSON from apiFetch
+async function fetchJSON<T = any>(url: string, init?: RequestInit): Promise<T> {
+  // apiFetch might already parse JSON and return the object directly,
+  // or it might return a Response. Support both.
+  const res: any = await apiFetch(url, init as any);
+  if (res && typeof res.json === "function") {
+    // Response-like
+    if (!("ok" in res) || res.ok) {
+      return (await res.json()) as T;
+    } else {
+      const txt = await res.text();
+      throw new Error(txt || `Request failed: ${res.status}`);
+    }
+  }
+  // Already parsed JSON
+  return res as T;
 }
-
 
 export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
   const [formData, setFormData] = useState<FormData>({
@@ -173,32 +172,29 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
     createdByEmail: user?.email,
   });
 
+  // ---- API helpers (now using fetchJSON)
   const postAnnouncement = async (body: Record<string, unknown>) => {
-    const res = await apiFetch('/announcements', {
+    return await fetchJSON(`/announcements`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(body),
-      credentials: "include",
+      credentials: "include" as any,
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   };
 
   const patchAnnouncement = async (id: string, body: Record<string, unknown>) => {
-    const res = await apiFetch(`/announcements/${id}`, {
+    return await fetchJSON(`/announcements/${id}`, {
       method: "PATCH",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(body),
-      credentials: "include",
+      credentials: "include" as any,
     });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
   };
 
   const fetchAnnouncement = async (id: string): Promise<AnnouncementDTO> => {
-    const res = await apiFetch(`/announcements/${id}`, { credentials: "include" });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
+    return await fetchJSON<AnnouncementDTO>(`/announcements/${id}`, {
+      credentials: "include" as any,
+    });
   };
 
   const resetForm = () => {
@@ -219,14 +215,25 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
     setEditingId(null);
   };
 
-const loadDrafts = async () => {
+  const loadDrafts = async () => {
     try {
       setIsLoadingDrafts(true);
-      const res = await apiFetch('/announcements/drafts', { credentials: "include" });
-      if (!res.ok) throw new Error(await res.text());
-      const data: AnnouncementDTO[] = await res.json();
-      setDrafts(normalizeDrafts(data));
+
+      // Your API returns a plain array
+      const data = await fetchJSON<AnnouncementDTO[]>(`/announcements/drafts`, {
+        credentials: "include" as any,
+      });
+
+      const options: DraftOption[] = (data || []).map((d) => ({
+        id: String(d.id ?? d._id),
+        title: d.title?.trim() || "(Untitled)",
+        updatedAtLabel: d.updatedAt ? new Date(d.updatedAt).toLocaleString() : "",
+        isScheduled: !!d.publishedSchedule,
+      }));
+
+      setDrafts(options);
     } catch (e: any) {
+      setDrafts([]);
       toast({ title: "Error", description: e?.message || "Failed to load drafts", variant: "destructive" });
     } finally {
       setIsLoadingDrafts(false);
@@ -243,7 +250,7 @@ const loadDrafts = async () => {
       eventDate: a.eventDate ? new Date(a.eventDate) : undefined,
       eventTime: a.eventTime || "",
       expectedAttendees: a.expectedAttendees || "",
-      isScheduled: false,   // start as not scheduled; user can toggle
+      isScheduled: false, // user can toggle after loading
       publishDate: undefined,
       publishTime: "",
       tags: a.tags || [],
@@ -253,7 +260,6 @@ const loadDrafts = async () => {
   useEffect(() => {
     loadDrafts();
   }, []);
-
 
   // SAVE DRAFT => published:false (no schedule)
   const handleSaveDraft = async () => {
@@ -357,8 +363,9 @@ const loadDrafts = async () => {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
+
           {/* Load Drafts */}
-           <Card>
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <FileText className="h-5 w-5" />
@@ -368,42 +375,34 @@ const loadDrafts = async () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3">
-                <Select
-                  // IMPORTANT: use undefined when nothing selected (not "")
-                  value={editingId ?? undefined}
-                  onValueChange={async (id) => {
-                    if (!id || id === "__none") return;
+                {/* Native select to avoid portal/controlled quirks */}
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  value={editingId ?? ""}
+                  onChange={async (e) => {
+                    const id = e.target.value;
+                    if (!id) return;
                     try {
                       const a = await fetchAnnouncement(id);
                       populateFromAnnouncement(a);
                       setEditingId(id);
                       toast({ title: "Draft Loaded", description: `Editing: ${a.title || "(Untitled)"}` });
-                    } catch (e: any) {
-                      toast({ title: "Error", description: e?.message || "Failed to load draft", variant: "destructive" });
+                    } catch (err: any) {
+                      toast({ title: "Error", description: err?.message || "Failed to load draft", variant: "destructive" });
                     }
                   }}
                 >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={isLoadingDrafts ? "Loading drafts..." : "Select a draft to edit"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {drafts.length === 0 ? (
-                      <SelectItem value="__none" disabled>
-                        No drafts found
-                      </SelectItem>
-                    ) : (
-                      drafts.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          <span className="inline-flex items-center gap-2">
-                            <span className="truncate max-w-[220px]">{d.title}</span>
-                            {d.isScheduled && <Badge variant="secondary" className="text-[10px]">scheduled</Badge>}
-                            {d.updatedAtLabel && <span className="text-xs text-muted-foreground">• {d.updatedAtLabel}</span>}
-                          </span>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                  <option value="" disabled>
+                    {isLoadingDrafts ? "Loading drafts..." : "Select a draft to edit"}
+                  </option>
+                  {drafts.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.title}
+                      {d.isScheduled ? " • scheduled" : ""}
+                      {d.updatedAtLabel ? ` • ${d.updatedAtLabel}` : ""}
+                    </option>
+                  ))}
+                </select>
 
                 <Button
                   variant="outline"
@@ -417,15 +416,19 @@ const loadDrafts = async () => {
                 <Button
                   variant="outline"
                   className="bg-transparent"
-                  onClick={() => { setEditingId(null); /* keep form if they want */ }}
+                  onClick={() => { setEditingId(null); }}
                   disabled={!editingId}
                   title="Clear selection"
                 >
                   Clear
                 </Button>
               </div>
+
+              {/* Tiny debug line; remove when you like */}
+              <div className="text-xs text-muted-foreground">Drafts loaded: {drafts.length}</div>
             </CardContent>
           </Card>
+
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -454,7 +457,15 @@ const loadDrafts = async () => {
                   <Select value={formData.category} onValueChange={v => handleInputChange("category", v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
-                      {categories.map(c => (
+                      {[
+                        {value: "health", label: "Health Program", color: "bg-green-100 text-green-800"},
+                        {value: "meeting", label: "Meeting", color: "bg-blue-100 text-blue-800"},
+                        {value: "community", label: "Community Event", color: "bg-purple-100 text-purple-800"},
+                        {value: "social-services", label: "Social Services", color: "bg-orange-100 text-orange-800"},
+                        {value: "education", label: "Education", color: "bg-indigo-100 text-indigo-800"},
+                        {value: "emergency", label: "Emergency", color: "bg-red-100 text-red-800"},
+                        {value: "maintenance", label: "Maintenance", color: "bg-yellow-100 text-yellow-800"},
+                      ].map(c => (
                         <SelectItem key={c.value} value={c.value}>
                           <div className="flex items-center space-x-2">
                             <Badge className={`${c.color} text-xs`}>{c.label}</Badge>
@@ -470,7 +481,12 @@ const loadDrafts = async () => {
                   <Select value={formData.priority} onValueChange={v => handleInputChange("priority", v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Select priority" /></SelectTrigger>
                     <SelectContent>
-                      {priorities.map(p => (
+                      {[
+                        {value: "low", label: "Low Priority", color: "bg-gray-100 text-gray-800"},
+                        {value: "medium", label: "Medium Priority", color: "bg-yellow-100 text-yellow-800"},
+                        {value: "high", label: "High Priority", color: "bg-red-100 text-red-800"},
+                        {value: "urgent", label: "Urgent", color: "bg-red-200 text-red-900"},
+                      ].map(p => (
                         <SelectItem key={p.value} value={p.value}>
                           <div className="flex items-center space-x-2">
                             <Badge className={`${p.color} text-xs`}>{p.label}</Badge>
@@ -487,7 +503,9 @@ const loadDrafts = async () => {
                 <Select value={formData.hall} onValueChange={v => handleInputChange("hall", v)}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select target hall" /></SelectTrigger>
                   <SelectContent>
-                    {halls.map(h => (<SelectItem key={h} value={h}>{h}</SelectItem>))}
+                    {["All Halls","Napico Hall","Greenpark Hall","Karangalan Hall","Manggahan Proper Hall"].map(h => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -696,7 +714,8 @@ const loadDrafts = async () => {
                             )}
                             {formData.category && (
                               <Badge variant="outline" className={getCategoryColor(formData.category)}>
-                                {categories.find(c => c.value === formData.category)?.label}
+                                {["Health Program","Meeting","Community Event","Social Services","Education","Emergency","Maintenance"]
+                                  .find((lbl, i) => ["health","meeting","community","social-services","education","emergency","maintenance"][i] === formData.category) || formData.category}
                               </Badge>
                             )}
                           </div>
