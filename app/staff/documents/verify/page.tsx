@@ -34,20 +34,28 @@ export default function DocumentVerifyPage() {
   const [manualCode, setManualCode] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("");
   const handleMarkCollected = async () => {
+    if (!verificationResult?.document?.id) return;
+    setIsVerifying(true);
+    setError("");
+    setSuccess("");
     try {
-      if (!verificationResult?.document?.id) return;
-      const resp = await apiFetch(`/submissions/${verificationResult.document.id}/complete`, { method: 'POST' });
-      if (!resp?.ok) throw new Error(resp?.message || 'Failed to update');
-      // Flip UI status to completed
-      setVerificationResult((prev:any) => ({
-        ...prev,
-        document: { ...prev.document, status: 'completed' }
-      }));
-    } catch (e:any) {
-      setError(e?.message || 'Failed to mark as collected');
+      const resp = await apiFetch(`/submissions/${verificationResult.document.id}/complete`, {
+        method: "POST",
+      });
+      if (!resp?.ok) throw new Error(resp?.message || "Failed to update");
+      // flip status locally
+      setVerificationResult((prev:any) =>
+        prev ? {...prev, document: {...prev.document!, status: "completed"}} : prev
+      );
+      setSuccess("Document marked as collected successfully.");
+    } catch (e: any) {
+      setError(e?.message || "Failed to mark as collected");
+    } finally {
+      setIsVerifying(false);
     }
-  }
+  };
 
   
   const handleQRScan = async (qrData: string) => {
@@ -175,6 +183,12 @@ export default function DocumentVerifyPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {success && (
+                  <Alert className="mb-6 border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertDescription className="text-green-800">{success}</AlertDescription>
+                  </Alert>
+                )}
                 {error && (
                   <Alert className="border-red-200 bg-red-50">
                     <AlertTriangle className="h-4 w-4" />
@@ -390,8 +404,11 @@ export default function DocumentVerifyPage() {
                 Verify Another Document
               </Button>
               {verificationResult.isValid && (
-                <Button>
-                  Mark as Collected
+                <Button
+                  onClick={handleMarkCollected}
+                  disabled={isVerifying || verificationResult.document?.status === "completed"}
+                >
+                  {verificationResult.document?.status === "completed" ? "Already Collected" : "Mark as Collected"}
                 </Button>
               )}
             </div>

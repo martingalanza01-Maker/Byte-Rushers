@@ -116,7 +116,7 @@ const [user, setUser] = useState({
   // Helpers for Recent Activity typing inconsistencies
   const isDocumentActivity = (activity: any) => {
     const t = (activity?.type || activity?.submissionType || "").toString().toLowerCase();
-    return t.includes("document");
+    return t.includes("document") && activity?.status === "ready";
   };
   const getActivityId = (activity: any): string => {
     const id = activity?.id ?? activity?._id ?? activity?.documentReqId ?? activity?.documentId;
