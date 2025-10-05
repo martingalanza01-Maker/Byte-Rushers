@@ -41,19 +41,7 @@ export function QRCodeScanner({ onScan, onClose }: QRCodeScannerProps) {
         videoRef.current.play()
       }
 
-      // Simulate QR code scanning
-      setTimeout(() => {
-        const mockQRData = JSON.stringify({
-          documentId: "DOC-2024-001",
-          residentId: "RES-001",
-          documentType: "Barangay Certificate",
-          issueDate: "2024-01-15",
-          expiryDate: "2024-07-15",
-          hall: "Napico Hall"
-        })
-        onScan(mockQRData)
-        stopCamera()
-      }, 3000)
+      // (QR scanning library integration point)      }, 3000)
 
     } catch (err) {
       setError("Unable to access camera. Please check permissions.")

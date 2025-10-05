@@ -34,86 +34,104 @@ export default function DocumentVerifyPage() {
   const [manualCode, setManualCode] = useState("")
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState("")
-
-  const handleQRScan = async (qrData: string) => {
-    setIsVerifying(true)
-    setError("")
-    setShowScanner(false)
-
+  const handleMarkCollected = async () => {
     try {
-      // Parse QR code data
-      const documentData = JSON.parse(qrData)
-      
-      // Simulate verification API call
-      setTimeout(() => {
-        setVerificationResult({
-          isValid: true,
-          document: {
-            id: documentData.documentId,
-            type: documentData.documentType,
-            residentName: "Juan Dela Cruz",
-            residentId: documentData.residentId,
-            issueDate: documentData.issueDate,
-            expiryDate: documentData.expiryDate,
-            hall: documentData.hall,
-            status: "Valid",
-            purpose: "Employment Requirements"
-          },
-          resident: {
-            name: "Juan Dela Cruz",
-            address: "123 Sampaguita St., Purok 1, Barangay Manggahan",
-            phone: "09171234567",
-            email: "juan.delacruz@email.com"
-          }
-        })
-        setIsVerifying(false)
-      }, 2000)
-    } catch (err) {
-      setError("Invalid QR code format")
-      setIsVerifying(false)
+      if (!verificationResult?.document?.id) return;
+      const resp = await apiFetch(`/submissions/${verificationResult.document.id}/complete`, { method: 'POST' });
+      if (!resp?.ok) throw new Error(resp?.message || 'Failed to update');
+      // Flip UI status to completed
+      setVerificationResult((prev:any) => ({
+        ...prev,
+        document: { ...prev.document, status: 'completed' }
+      }));
+    } catch (e:any) {
+      setError(e?.message || 'Failed to mark as collected');
     }
   }
 
+  
+  const handleQRScan = async (qrData: string) => {
+    setIsVerifying(true);
+    setError("");
+    setShowScanner(false);
+    try {
+      // Accept either plain code or a JSON payload with documentId
+      let code = qrData;
+      try {
+        const obj = JSON.parse(qrData);
+        code = obj.documentId || obj.id || obj.documentReqId || qrData;
+      } catch {}
+      const resp = await apiFetch(`/submissions/document/${encodeURIComponent(code)}`);
+      if (!resp?.ok) throw new Error(resp?.message || 'Invalid or unknown document');
+      const d = resp.data;
+      setVerificationResult({
+        isValid: true,
+        message: 'The document was found and is valid for release.',
+        document: {
+          id: d.id,
+          code: d.documentReqId || d.id,
+          title: d.title || 'Document',
+          type: d.type,
+          issueDate: d.issueDate,
+          expiryDate: d.expiryDate,
+          hall: d.hall,
+          status: d.status,
+          purpose: d.purpose,
+          fee: d.fee,
+        },
+        resident: {
+          name: d.resident?.name,
+          address: d.resident?.address,
+          phone: d.resident?.phone,
+          email: d.resident?.email,
+        }
+      });
+    } catch (e:any) {
+      setError(e?.message || 'Invalid QR code');
+    } finally {
+      setIsVerifying(false);
+    }
+  }
+
+  
   const handleManualVerify = async () => {
     if (!manualCode.trim()) {
-      setError("Please enter a document code")
-      return
+      setError("Please enter a document code");
+      return;
     }
-
-    setIsVerifying(true)
-    setError("")
-
-    // Simulate manual verification
-    setTimeout(() => {
-      if (manualCode === "DOC-2024-001") {
-        setVerificationResult({
-          isValid: true,
-          document: {
-            id: "DOC-2024-001",
-            type: "Barangay Certificate",
-            residentName: "Juan Dela Cruz",
-            residentId: "RES-001",
-            issueDate: "2024-01-15",
-            expiryDate: "2024-07-15",
-            hall: "Napico Hall",
-            status: "Valid",
-            purpose: "Employment Requirements"
-          },
-          resident: {
-            name: "Juan Dela Cruz",
-            address: "123 Sampaguita St., Purok 1, Barangay Manggahan",
-            phone: "09171234567",
-            email: "juan.delacruz@email.com"
-          }
-        })
-      } else {
-        setVerificationResult({
-          isValid: false,
-          error: "Document not found or invalid"
-        })
-      }
-      setIsVerifying(false)
-    }, 1500)
+    setIsVerifying(true);
+    setError("");
+    try {
+      const resp = await apiFetch(`/submissions/document/${encodeURIComponent(manualCode.trim())}`);
+      if (!resp?.ok) throw new Error(resp?.message || 'Document not found');
+      const d = resp.data;
+      setVerificationResult({
+        isValid: true,
+        message: 'The document was found and is valid for release.',
+        document: {
+          id: d.id,
+          code: d.documentReqId || d.id,
+          title: d.title || 'Document',
+          type: d.type,
+          issueDate: d.issueDate,
+          expiryDate: d.expiryDate,
+          hall: d.hall,
+          status: d.status,
+          purpose: d.purpose,
+          fee: d.fee,
+        },
+        resident: {
+          name: d.resident?.name,
+          address: d.resident?.address,
+          phone: d.resident?.phone,
+          email: d.resident?.email,
+        }
+      });
+    } catch (e:any) {
+      setError(e?.message || 'Unable to verify document');
+    } finally {
+      setIsVerifying(false);
+    }
   }
 
   const handleReset = () => {
