@@ -60,7 +60,47 @@ export default function StaffDashboard() {
   }, []);
 
     const router = useRouter();
-    useEffect(() => {
+    
+  // Load Today's Tasks from Submissions
+  useEffect(() => {
+    let cancelled = false as any;
+    (async () => {
+      try {
+        const filter = encodeURIComponent(JSON.stringify({
+          where: { or: [{status: 'pending'}, {status: 'ready'}, {status: 'active'}] },
+          order: ["createdAt DESC"]
+        }));
+        const res = await apiFetch(`/submissions?filter=${filter}`);
+        const arr = Array.isArray(res) ? res : (res?.data || []);
+        const mapped = arr.map((s: any, i: number) => {
+          const rawStatus = lc(s.status);
+          const status = mapStatus(rawStatus);
+          const submittedAt = s.createdAt || s.created || new Date().toISOString();
+          const type = (s.submissionType || s.type || 'submission').toString();
+          const title = s.subject || `${type} - ${s.name || ''}`.trim();
+          return {
+            id: s.id || s.complaintId || s.documentReqId || i + 1,
+            type: type,
+            title,
+            priority: s.priority || (rawStatus === 'active' ? 'high' : 'medium'),
+            status,
+            dueDate: submittedAt,
+            description: s.description || (s.complaintId ? `Complaint ${s.complaintId}` : s.documentReqId ? `Document ${s.documentReqId}` : 'Submission'),
+            location: s.location || '',
+            _rawStatus: rawStatus,
+            _rawCreatedAt: submittedAt,
+          };
+        })
+        // Keep "today" focused but don't hide if empty; prefer today's or pending/active
+        const todays = mapped.filter((t: any) => isToday(t._rawCreatedAt) || t.status !== 'completed');
+        if (!cancelled) setRecentTasks(todays);
+      } catch (e) {
+        // silent fail
+      }
+    })();
+    return () => { cancelled = true as any };
+  }, []);
+useEffect(() => {
       let cancelled = false;
       (async () => {
         try {
@@ -91,35 +131,9 @@ export default function StaffDashboard() {
     activeComplaints: 0,
     documentsProcessed: 0,
   })
-const [recentTasks] = useState([
-    {
-      id: 1,
-      type: "document",
-      title: "Barangay Clearance - Maria Santos",
-      priority: "high",
-      status: "pending",
-      dueDate: "2024-01-16",
-      description: "Employment requirement - urgent processing needed",
-    },
-    {
-      id: 2,
-      type: "complaint",
-      title: "Street Light Repair - Block 5",
-      priority: "medium",
-      status: "in-progress",
-      dueDate: "2024-01-18",
-      description: "Maintenance team assigned, work in progress",
-    },
-    {
-      id: 3,
-      type: "verification",
-      title: "Document Verification - QR Code",
-      priority: "low",
-      status: "completed",
-      dueDate: "2024-01-15",
-      description: "Certificate authenticity verified successfully",
-    },
-  ])
+const [recentTasks, setRecentTasks] = useState<any[]>([])
+  const [showAllTasks, setShowAllTasks] = useState(false)
+  const displayedTasks = showAllTasks ? recentTasks : recentTasks.slice(0, 5)
 
   const [quickActions] = useState([
     {
@@ -237,7 +251,21 @@ const [recentTasks] = useState([
     }
   }
 
-  const getStatusColor = (status: string) => {
+  
+  // Helpers for Today's Tasks data mapping
+  const lc = (v: unknown) => (v ?? '').toString().toLowerCase();
+  const mapStatus = (s?: string) => {
+    const v = lc(s);
+    if (v === 'completed' || v === 'resolved') return 'completed';
+    if (v === 'pending' || v === 'new') return 'pending';
+    return 'in-progress'; // active, ready, etc.
+  };
+  const isToday = (iso?: string) => {
+    if (!iso) return false;
+    const d = new Date(iso); const n = new Date();
+    return d.getFullYear()===n.getFullYear() && d.getMonth()===n.getMonth() && d.getDate()===n.getDate();
+  };
+const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
         return "bg-gradient-to-r from-green-100 to-green-200 text-green-800"
@@ -467,7 +495,7 @@ const [recentTasks] = useState([
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentTasks.map((task) => (
+                    {displayedTasks.map((task) => (
                       <div
                         key={task.id}
                         className="flex items-start space-x-4 p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm card-hover"
@@ -502,9 +530,9 @@ const [recentTasks] = useState([
                   </div>
 
                   <div className="mt-6 text-center">
-                    <Button variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent">
+                    <Button  onClick={() => setShowAllTasks(v => !v)} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent">
                       <Activity className="h-4 w-4 mr-2" />
-                      View All Tasks
+                       {showAllTasks ? "Collapse Tasks" : "View All Tasks"}
                     </Button>
                   </div>
                 </CardContent>
