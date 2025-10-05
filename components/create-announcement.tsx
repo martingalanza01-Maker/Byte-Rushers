@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
@@ -37,7 +37,7 @@ import { apiFetch } from "@/lib/api";
 
 interface CreateAnnouncementProps {
   user: { name: string; position: string; hall: string; email?: string };
-  onNavigate?: (page: string) => void; // optional to avoid unused-var errors
+  onNavigate?: (page: string) => void;
 }
 
 type FormData = {
@@ -54,6 +54,50 @@ type FormData = {
   publishTime: string;
   tags: string[];
 };
+
+type AnnouncementDTO = {
+  id?: string;            // <-- make optional
+  _id?: string;           // <-- handle Mongo-style id just in case
+  title?: string;
+  content?: string;
+  category?: string;
+  priority?: string;
+  hall?: string;
+  eventDate?: string | null;
+  eventTime?: string | null;
+  expectedAttendees?: string | null;
+  tags?: string[];
+  published?: boolean | null;
+  publishedSchedule?: string | null;
+  createdByName?: string;
+  createdByEmail?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+// Normalized shape used in dropdown
+type DraftOption = {
+  id: string;
+  title: string;
+  updatedAtLabel: string;
+  isScheduled: boolean;
+};
+
+function normalizeDrafts(rows: AnnouncementDTO[]): DraftOption[] {
+  return rows
+    .map((r) => {
+      const id = (r.id || (r as any)._id || "").toString();
+      if (!id) return null;
+      const title = (r.title?.trim() || "(Untitled)");
+      const isScheduled = !!r.publishedSchedule;
+      const updatedAtLabel = r.updatedAt
+        ? new Date(r.updatedAt).toLocaleString()
+        : "";
+      return { id, title, updatedAtLabel, isScheduled };
+    })
+    .filter(Boolean) as DraftOption[];
+}
+
 
 export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
   const [formData, setFormData] = useState<FormData>({
@@ -76,7 +120,12 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const categories = [
+  // Drafts state
+  const [drafts, setDrafts] = useState<DraftOption[]>([]);
+  const [isLoadingDrafts, setIsLoadingDrafts] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const categories = useMemo(() => ([
     {value: "health", label: "Health Program", color: "bg-green-100 text-green-800"},
     {value: "meeting", label: "Meeting", color: "bg-blue-100 text-blue-800"},
     {value: "community", label: "Community Event", color: "bg-purple-100 text-purple-800"},
@@ -84,16 +133,17 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
     {value: "education", label: "Education", color: "bg-indigo-100 text-indigo-800"},
     {value: "emergency", label: "Emergency", color: "bg-red-100 text-red-800"},
     {value: "maintenance", label: "Maintenance", color: "bg-yellow-100 text-yellow-800"},
-  ];
+  ]), []);
 
-  const priorities = [
+  const priorities = useMemo(() => ([
     {value: "low", label: "Low Priority", color: "bg-gray-100 text-gray-800"},
     {value: "medium", label: "Medium Priority", color: "bg-yellow-100 text-yellow-800"},
     {value: "high", label: "High Priority", color: "bg-red-100 text-red-800"},
     {value: "urgent", label: "Urgent", color: "bg-red-200 text-red-900"},
-  ];
+  ]), []);
 
-  const halls = ["All Halls", "Napico Hall", "Greenpark Hall", "Karangalan Hall", "Manggahan Proper Hall"];
+  const halls = useMemo(() =>
+    ["All Halls", "Napico Hall", "Greenpark Hall", "Karangalan Hall", "Manggahan Proper Hall"], []);
 
   const handleInputChange = (field: keyof FormData, value: FormData[typeof field]) =>
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -130,14 +180,28 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
       body: JSON.stringify(body),
       credentials: "include",
     });
-    if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(msg || `POST /announcements failed (${res.status})`);
-    }
+    if (!res.ok) throw new Error(await res.text());
     return res.json();
   };
 
-  const resetForm = () =>
+  const patchAnnouncement = async (id: string, body: Record<string, unknown>) => {
+    const res = await apiFetch(`/announcements/${id}`, {
+      method: "PATCH",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(body),
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  };
+
+  const fetchAnnouncement = async (id: string): Promise<AnnouncementDTO> => {
+    const res = await apiFetch(`/announcements/${id}`, { credentials: "include" });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  };
+
+  const resetForm = () => {
     setFormData({
       title: "",
       content: "",
@@ -152,14 +216,61 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
       publishTime: "",
       tags: [],
     });
+    setEditingId(null);
+  };
 
-  // SAVE DRAFT => published: false (no publishedSchedule)
+const loadDrafts = async () => {
+    try {
+      setIsLoadingDrafts(true);
+      const res = await apiFetch('/announcements/drafts', { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const data: AnnouncementDTO[] = await res.json();
+      setDrafts(normalizeDrafts(data));
+    } catch (e: any) {
+      toast({ title: "Error", description: e?.message || "Failed to load drafts", variant: "destructive" });
+    } finally {
+      setIsLoadingDrafts(false);
+    }
+  };
+
+  const populateFromAnnouncement = (a: AnnouncementDTO) => {
+    setFormData({
+      title: a.title || "",
+      content: a.content || "",
+      category: a.category || "",
+      priority: a.priority || "",
+      hall: a.hall || "",
+      eventDate: a.eventDate ? new Date(a.eventDate) : undefined,
+      eventTime: a.eventTime || "",
+      expectedAttendees: a.expectedAttendees || "",
+      isScheduled: false,   // start as not scheduled; user can toggle
+      publishDate: undefined,
+      publishTime: "",
+      tags: a.tags || [],
+    });
+  };
+
+  useEffect(() => {
+    loadDrafts();
+  }, []);
+
+
+  // SAVE DRAFT => published:false (no schedule)
   const handleSaveDraft = async () => {
     try {
       setIsSaving(true);
-      await postAnnouncement({ ...basePayload(), published: false });
-      toast({ title: "Draft Saved", description: "Your announcement has been saved as a draft." });
+      const payload = { ...basePayload(), published: false };
+
+      if (editingId) {
+        await patchAnnouncement(editingId, payload);
+        toast({ title: "Draft Updated", description: "Your draft has been updated." });
+      } else {
+        await postAnnouncement(payload);
+        toast({ title: "Draft Saved", description: "Your announcement has been saved as a draft." });
+      }
+
       resetForm();
+      loadDrafts();
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Failed to save draft", variant: "destructive" });
     } finally {
@@ -170,11 +281,7 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
   // PUBLISH NOW or SCHEDULE
   const handlePublish = async () => {
     if (!formData.title || !formData.content || !formData.category || !formData.priority) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields before publishing.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing Information", description: "Please fill in all required fields before publishing.", variant: "destructive" });
       return;
     }
 
@@ -190,14 +297,25 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
         const [hh, mm] = (formData.publishTime || "00:00").split(":");
         dt.setHours(parseInt(hh || "0", 10), parseInt(mm || "0", 10), 0, 0);
 
-        await postAnnouncement({ ...basePayload(), published: false, publishedSchedule: dt.toISOString() });
+        const payload = { ...basePayload(), published: false, publishedSchedule: dt.toISOString() };
+        if (editingId) {
+          await patchAnnouncement(editingId, payload);
+        } else {
+          await postAnnouncement(payload);
+        }
         toast({ title: "Scheduled!", description: "Your announcement will be published at the scheduled time." });
       } else {
-        await postAnnouncement({ ...basePayload(), published: true });
+        const payload = { ...basePayload(), published: true };
+        if (editingId) {
+          await patchAnnouncement(editingId, payload);
+        } else {
+          await postAnnouncement(payload);
+        }
         toast({ title: "Announcement Published!", description: "Your announcement has been published and residents will be notified." });
       }
 
       resetForm();
+      loadDrafts();
     } catch (e: any) {
       toast({ title: "Error", description: e?.message || "Publish failed", variant: "destructive" });
     } finally {
@@ -239,6 +357,75 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Load Drafts */}
+           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Load Draft</span>
+              </CardTitle>
+              <CardDescription>Select a draft (published = false) to edit and auto-populate the form</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3">
+                <Select
+                  // IMPORTANT: use undefined when nothing selected (not "")
+                  value={editingId ?? undefined}
+                  onValueChange={async (id) => {
+                    if (!id || id === "__none") return;
+                    try {
+                      const a = await fetchAnnouncement(id);
+                      populateFromAnnouncement(a);
+                      setEditingId(id);
+                      toast({ title: "Draft Loaded", description: `Editing: ${a.title || "(Untitled)"}` });
+                    } catch (e: any) {
+                      toast({ title: "Error", description: e?.message || "Failed to load draft", variant: "destructive" });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={isLoadingDrafts ? "Loading drafts..." : "Select a draft to edit"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drafts.length === 0 ? (
+                      <SelectItem value="__none" disabled>
+                        No drafts found
+                      </SelectItem>
+                    ) : (
+                      drafts.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>
+                          <span className="inline-flex items-center gap-2">
+                            <span className="truncate max-w-[220px]">{d.title}</span>
+                            {d.isScheduled && <Badge variant="secondary" className="text-[10px]">scheduled</Badge>}
+                            {d.updatedAtLabel && <span className="text-xs text-muted-foreground">• {d.updatedAtLabel}</span>}
+                          </span>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  className="bg-transparent"
+                  onClick={loadDrafts}
+                  title="Reload drafts"
+                >
+                  Reload
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="bg-transparent"
+                  onClick={() => { setEditingId(null); /* keep form if they want */ }}
+                  disabled={!editingId}
+                  title="Clear selection"
+                >
+                  Clear
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -385,7 +572,7 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Send className="h-5 w-5" />
-                <span>Publishing</span>
+                <span>{editingId ? "Update / Publish" : "Publishing"}</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -425,13 +612,13 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
                 <Button onClick={handlePublish}
                   className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
                   disabled={isPublishing}>
-                  {isPublishing ? (<><Clock className="h-4 w-4 mr-2 animate-spin" />Publishing...</>) : (
-                    <><Send className="h-4 w-4 mr-2" />{formData.isScheduled ? "Schedule" : "Publish Now"}</>
+                  {isPublishing ? (<><Clock className="h-4 w-4 mr-2 animate-spin" />{editingId ? "Updating..." : "Publishing..."}</>) : (
+                    <><Send className="h-4 w-4 mr-2" />{formData.isScheduled ? (editingId ? "Schedule Update" : "Schedule") : (editingId ? "Publish Update" : "Publish Now")}</>
                   )}
                 </Button>
 
                 <Button variant="outline" onClick={handleSaveDraft} className="w-full bg-transparent" disabled={isSaving}>
-                  {isSaving ? (<><Clock className="h-4 w-4 mr-2 animate-spin" />Saving...</>) : (<><Save className="h-4 w-4 mr-2" />Save Draft</>)}
+                  {isSaving ? (<><Clock className="h-4 w-4 mr-2 animate-spin" />Saving...</>) : (<><Save className="h-4 w-4 mr-2" />{editingId ? "Save Draft Changes" : "Save Draft"}</>)}
                 </Button>
               </div>
             </CardContent>
