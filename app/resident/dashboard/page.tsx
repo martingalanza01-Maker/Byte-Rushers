@@ -25,6 +25,7 @@ import {
   Sparkles,
   Award,
   Heart,
+  QrCode,
 } from "lucide-react"
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
@@ -465,15 +466,20 @@ const [user, setUser] = useState({
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
                           <div className="flex items-center text-xs text-gray-500">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {new Date(activity.date).toLocaleDateString()}
-                          {isDocumentActivity(activity) && (
+                            <div className="flex items-center mr-4">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {new Date(activity.date).toLocaleDateString()}
+                            </div>
+                            <div className="flex items-center">
+                            {isDocumentActivity(activity) && (
                             <div className="mt-2">
-                              <Button size="sm" variant="outline" onClick={() => downloadSubmissionQR(getActivityId(activity), activity.title)}>
-                                Download QR
+                              <Button variant="outline" size="sm" className="flex items-center space-x-1 bg-transparent" onClick={() => downloadSubmissionQR(getActivityId(activity), activity.title)}>
+                               <QrCode className="h-3 w-3" />
+                                <span>QR Code</span>
                               </Button>
                             </div>
-                          )}
+                            )}
+                            </div>
                           </div>
                         </div>
                       </div>
