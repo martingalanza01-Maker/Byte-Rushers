@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Camera, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { Camera, X, AlertCircle } from 'lucide-react'
 
 interface QRCodeScannerProps {
   onScan: (data: string) => void
@@ -17,6 +17,10 @@ export function QRCodeScanner({ onScan, onClose }: QRCodeScannerProps) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+
+  // Decoder handles (no UI changes)
+  const decoderRef = useRef<any>(null)
+  const controlsRef = useRef<any>(null)
 
   useEffect(() => {
     return () => {
@@ -38,12 +42,43 @@ export function QRCodeScanner({ onScan, onClose }: QRCodeScannerProps) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play()
       }
 
-      // (QR scanning library integration point)      }, 3000)
+      // QR decoding (keeps original UX)
+      try {
+        const { BrowserMultiFormatReader } = await import("@zxing/browser")
+        const reader = new BrowserMultiFormatReader()
+        decoderRef.current = reader
 
-    } catch (err) {
+        const promiseOrControls = reader.decodeFromVideoElement(
+          videoRef.current!,
+          (result: any) => {
+            if (result) {
+              const text =
+                typeof (result as any) === "string"
+                  ? (result as any as string)
+                  : ((result as any)?.getText ? (result as any).getText() : "")
+
+              // Stop decoder/camera then report
+              stopCamera()
+              if (text) onScan(text)
+            }
+            // ignore transient errors in callback
+          }
+        )
+
+        // Handle both return shapes: IScannerControls or Promise<IScannerControls>
+        if (typeof (promiseOrControls as any)?.then === "function") {
+          controlsRef.current = await (promiseOrControls as Promise<any>)
+        } else {
+          controlsRef.current = promiseOrControls
+        }
+      } catch (e: any) {
+        setError(e?.message || "Unable to start QR decoder.")
+      }
+
+    } catch {
       setError("Unable to access camera. Please check permissions.")
       setHasPermission(false)
       setIsScanning(false)
@@ -51,6 +86,12 @@ export function QRCodeScanner({ onScan, onClose }: QRCodeScannerProps) {
   }
 
   const stopCamera = () => {
+    // Stop ZXing controls first (handles both shapes)
+    try { controlsRef.current?.stop?.() } catch {}
+    controlsRef.current = null
+    try { decoderRef.current?.reset?.() } catch {}
+    decoderRef.current = null
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
@@ -60,9 +101,7 @@ export function QRCodeScanner({ onScan, onClose }: QRCodeScannerProps) {
 
   const handleManualInput = () => {
     const manualData = prompt("Enter QR code data manually:")
-    if (manualData) {
-      onScan(manualData)
-    }
+    if (manualData) onScan(manualData)
   }
 
   return (
