@@ -30,68 +30,75 @@ export default function AnnouncementsPage() {
     return () => { cancelled = true };
   }, []);
 
-  const announcements = [
-    {
-      id: 1,
-      title: "Community Health Program - Free Medical Checkup",
-      content: "Join us for a free medical checkup and health consultation. Available services include blood pressure monitoring, diabetes screening, and general health assessment.",
-      category: "Health",
-      hall: "Napico Hall",
-      date: "2024-01-15",
-      time: "8:00 AM - 5:00 PM",
-      priority: "high",
-      attendees: 150,
-      status: "upcoming"
-    },
-    {
-      id: 2,
-      title: "Barangay Assembly Meeting - January 2024",
-      content: "Monthly barangay assembly to discuss community issues, budget allocation, and upcoming projects. All residents are encouraged to attend.",
-      category: "Meeting",
-      hall: "Manggahan Proper Hall",
-      date: "2024-01-20",
-      time: "2:00 PM - 5:00 PM",
-      priority: "medium",
-      attendees: 200,
-      status: "upcoming"
-    },
-    {
-      id: 3,
-      title: "Street Cleaning and Beautification Drive",
-      content: "Community-wide cleaning activity to maintain cleanliness and beautify our neighborhood. Bring your own cleaning materials and join us!",
-      category: "Community",
-      hall: "Greenpark Hall",
-      date: "2024-01-22",
-      time: "6:00 AM - 10:00 AM",
-      priority: "medium",
-      attendees: 80,
-      status: "upcoming"
-    },
-    {
-      id: 4,
-      title: "Senior Citizens' Monthly Pension Distribution",
-      content: "Monthly pension distribution for qualified senior citizens. Please bring valid IDs and pension booklets.",
-      category: "Social Services",
-      hall: "Karangalan Hall",
-      date: "2024-01-25",
-      time: "9:00 AM - 3:00 PM",
-      priority: "high",
-      attendees: 300,
-      status: "upcoming"
-    },
-    {
-      id: 5,
-      title: "Youth Skills Training Program Registration",
-      content: "Registration is now open for our youth skills training program covering computer literacy, entrepreneurship, and vocational skills.",
-      category: "Education",
-      hall: "All Halls",
-      date: "2024-01-10",
-      time: "8:00 AM - 5:00 PM",
-      priority: "medium",
-      attendees: 120,
-      status: "ongoing"
-    }
-  ]
+  
+  const [announcements, setAnnouncements] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Fetch only published announcements
+        const res = await apiFetch("/announcements/published");
+        const data = Array.isArray(res) ? res : (res?.data ?? []);
+
+        const today = new Date();
+        const isSameDay = (a: Date, b: Date) =>
+          a.getFullYear() === b.getFullYear() &&
+          a.getMonth() === b.getMonth() &&
+          a.getDate() === b.getDate();
+
+        const toTime = (d: Date) => {
+          let h = d.getHours();
+          const m = d.getMinutes().toString().padStart(2, "0");
+          const ampm = h >= 12 ? "PM" : "AM";
+          h = h % 12 || 12;
+          return `${h}:${m} ${ampm}`;
+        };
+
+        const normalized = (data as any[]).map((item, idx) => {
+          const dateStr =
+            item.date ||
+            item.eventDate ||
+            item.publishedDate ||
+            item.publishDate ||
+            item.startDate ||
+            item.createdAt ||
+            item.updatedAt ||
+            null;
+
+          const d = dateStr ? new Date(dateStr) : new Date();
+          const status = isSameDay(d, today) ? "ongoing" : "upcoming";
+          const priorityRaw = (item.priority ?? item.importance ?? "normal").toString();
+          const priority = priorityRaw.toLowerCase();
+
+          return {
+            id: item.id ?? item._id ?? idx + 1,
+            title: item.title ?? item.subject ?? "Announcement",
+            content: item.content ?? item.description ?? "",
+            date: d.toISOString().slice(0,10), // YYYY-MM-DD for display chip
+            time: item.time ?? toTime(d),
+            location: item.location ?? item.venue ?? "Barangay Hall",
+            category: item.category ?? item.type ?? "general",
+            hall: item.hall ?? item.barangayHall ?? "All Halls",
+            priority, // lowercased
+            status,   // 'ongoing' for today, 'upcoming' otherwise
+            attendees: Number(item.attendees ?? 0)
+          }
+        });
+
+        if (!cancelled) setAnnouncements(normalized);
+      } catch (e:any) {
+        if (!cancelled) setError(e?.message || "Failed to load announcements");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true };
+  }, []);
 
   const filteredAnnouncements = announcements.filter(announcement => {
     const matchesSearch = announcement.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
