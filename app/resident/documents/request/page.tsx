@@ -101,6 +101,8 @@ export default function DocumentRequestPage() {
         smsNotifications: formData.smsNotifications,
         additionalNotes: formData.additionalNotes,
         status: formData.status,
+        fee: ((selectedDocument?.fee || 0) + (formData.urgentRequest ? 20 : 0)),
+        urgent: formData.urgentRequest,
       };
       const res = await createSubmission(payload);
       // Store the returned documentReqId to show in success screen
