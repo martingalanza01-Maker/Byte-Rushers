@@ -27,6 +27,7 @@ import {
   Download,
   Copy,
   Camera,
+  Bell
 } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 
@@ -53,6 +54,8 @@ interface ResidentProfile {
   avatar?: string
   middleName?: string
   emailVerified?: boolean
+  enableSMSNotif?: boolean
+  enableEmailNotif?: boolean
 }
 
 
@@ -155,6 +158,8 @@ export default function ProfilePage() {
         birthDate: editedProfile.birthDate,
         emergencyContact: editedProfile.emergencyContact,
         emergencyPhone: editedProfile.emergencyPhone,
+        enableSMSNotif: editedProfile.enableSMSNotif,
+        enableEmailNotif: editedProfile.enableEmailNotif,
       };
       const res = await apiFetch('/users/me', {
         method: 'PATCH',
@@ -180,7 +185,7 @@ export default function ProfilePage() {
     setIsEditing(false)
   }
 
-  const handleInputChange = (field: keyof ResidentProfile, value: string) => {
+  const handleInputChange = (field: keyof ResidentProfile, value: string | boolean) => {
     setEditedProfile(prev => ({ ...(prev || {}), [field]: value }))
   }
 
@@ -531,6 +536,47 @@ export default function ProfilePage() {
                         />
                       ) : (
                         <p className="mt-1 text-gray-900 font-medium">{profile.emergencyPhone || "—"}</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Notification Settings Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Bell className="h-5 w-5 text-red-600" />
+                    <span>Notification Settings</span>
+                  </CardTitle>
+                  <CardDescription>Manage your notification preferences</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="enableEmailNotif">Email Notifications</Label>
+                      {isEditing ? (
+                        <Input
+                          id="enableEmailNotif"
+                          type="checkbox"
+                          checked={editedProfile?.enableEmailNotif || false}
+                          onChange={(e) => handleInputChange("enableEmailNotif", e.target.checked)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.enableEmailNotif ? "Enabled" : "Disabled"}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="enableSMSNotif">SMS Notifications</Label>
+                      {isEditing ? (
+                        <Input
+                          id="enableSMSNotif"
+                          type="checkbox"
+                          checked={editedProfile?.enableSMSNotif || false}
+                          onChange={(e) => handleInputChange("enableSMSNotif", e.target.checked)}
+                        />
+                      ) : (
+                        <p className="mt-1 text-gray-900 font-medium">{profile.enableSMSNotif ? "Enabled" : "Disabled"}</p>
                       )}
                     </div>
                   </div>
