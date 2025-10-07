@@ -155,40 +155,6 @@ export function Navbar({ user }: NavbarProps) {
 
           {/* Right Side - Notifications & User Menu */}
           <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="relative">
-                  <Bell className="h-5 w-5" />
-                  {notifications.length > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-gradient-to-r from-red-500 to-red-600 text-white text-xs">
-                      {notifications.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel className="flex items-center space-x-2">
-                  <Bell className="h-4 w-4" />
-                  <span>Notifications</span>
-                  <Badge className="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border-0">
-                    {notifications.length}
-                  </Badge>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.map((notification) => (
-                  <DropdownMenuItem key={notification.id} className="flex flex-col items-start p-4">
-                    <div className="font-semibold text-sm">{notification.title}</div>
-                    <div className="text-xs text-gray-600 mt-1">{notification.message}</div>
-                    <div className="text-xs text-gray-500 mt-2">{notification.time}</div>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-center text-blue-600 font-medium">
-                  View All Notifications
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             {/* User Menu */}
             <DropdownMenu>
@@ -239,15 +205,19 @@ export function Navbar({ user }: NavbarProps) {
                     <span>Dashboard</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center space-x-2">
-                  <Link
-                    href={user.type === "staff" ? "/staff/profile" : "/resident/profile"}
-                    className="flex items-center space-x-2"
-                  >
-                    <User className="h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
-                </DropdownMenuItem>
+                {
+                  user.type === "resident" && (
+                    <DropdownMenuItem className="flex items-center space-x-2">
+                      <Link
+                        href="/resident/profile"
+                        className="flex items-center space-x-2"
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )
+                }
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}

@@ -32,8 +32,10 @@ import { CreateAnnouncement } from "@/components/create-announcement"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
+import ResidentLookup from "@/components/resident-lookup"
 
 export default function StaffDashboard() {
+    const [residentLookupOpen, setResidentLookupOpen] = useState(false);
     const [user, setUser] = useState({
       name: "Juan Dela Cruz",
       email: "juan.delacruz@manggahan.gov.ph",
@@ -631,6 +633,7 @@ const getStatusColor = (status: string) => {
                   <Button
                     variant="outline"
                     className="w-full justify-start border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
+                    onClick={() => setResidentLookupOpen(true)}
                   >
                     <Users className="h-4 w-4 mr-3" />
                     Resident Lookup
@@ -641,6 +644,7 @@ const getStatusColor = (status: string) => {
           </div>
         </div>
       </div>
+      <ResidentLookup open={residentLookupOpen} onClose={() => setResidentLookupOpen(false)} />
     </div>
   )
 }
