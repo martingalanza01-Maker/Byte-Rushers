@@ -610,6 +610,7 @@ const getStatusColor = (status: string) => {
                   <Button
                     variant="outline"
                     className="w-full justify-start border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+                    onClick={() => router.push("/staff/documents/verify")}
                   >
                     <Shield className="h-4 w-4 mr-3" />
                     Verify QR Code
