@@ -1,5 +1,7 @@
 "use client"
 
+import FeedbackModal from "@/components/feedback-modal";
+
 import type React from "react"
 
 import { useState } from "react"
@@ -32,6 +34,7 @@ export default function DocumentRequestPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [feedbackDone, setFeedbackDone] = useState(false)
 
   const documentTypes = [
     {
@@ -126,6 +129,7 @@ export default function DocumentRequestPage() {
                 <FileText className="h-8 w-8 text-green-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Request Submitted Successfully</h2>
+              <FeedbackModal pagePath="/resident/documents/request" forceOpen onSubmitted={() => setFeedbackDone(true)} />
               <p className="text-gray-600 mb-6">
                 Your document request has been received and assigned ID: <strong>{typeof window !== 'undefined' ? (sessionStorage.getItem('last_doc_id') || 'N/A') : 'N/A'}</strong>
               </p>
@@ -140,12 +144,16 @@ export default function DocumentRequestPage() {
                 </ul>
               </div>
               <div className="flex space-x-4 justify-center">
-                <Link href="/resident/dashboard">
-                  <Button>Go to Dashboard</Button>
-                </Link>
-                <Button variant="outline" onClick={() => setSubmitted(false)}>
-                  Request Another
-                </Button>
+                {feedbackDone ? (
+                  <Link href="/resident/dashboard"><Button>Go to Dashboard</Button></Link>
+                ) : (
+                  <Button disabled>Go to Dashboard</Button>
+                )}
+                {feedbackDone ? (
+                  <Button variant="outline" onClick={() => setSubmitted(false)}>Request Another</Button>
+                ) : (
+                  <Button variant="outline" disabled>Request Another</Button>
+                )}
               </div>
             </CardContent>
           </Card>
