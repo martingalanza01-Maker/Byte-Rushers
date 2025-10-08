@@ -311,7 +311,10 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
         }
         toast({ title: "Scheduled!", description: "Your announcement will be published at the scheduled time." });
       } else {
-        const payload = { ...basePayload(), published: true };
+        const now = new Date();
+        const plusMins = 2;
+        const final = new Date(now.getTime() + plusMins * 60 * 1000);
+        const payload = { ...basePayload(), published: true, publishedSchedule: final.toISOString() };
         if (editingId) {
           await patchAnnouncement(editingId, payload);
         } else {
