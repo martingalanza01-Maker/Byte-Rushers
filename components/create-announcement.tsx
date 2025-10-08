@@ -265,7 +265,7 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
   const handleSaveDraft = async () => {
     try {
       setIsSaving(true);
-      const payload = { ...basePayload(), published: false };
+      const payload = { ...basePayload(), published: false, publishedSchedule: null };
 
       if (editingId) {
         await patchAnnouncement(editingId, payload);
@@ -314,7 +314,7 @@ export function CreateAnnouncement({ user }: CreateAnnouncementProps) {
         const now = new Date();
         const plusMins = 2;
         const final = new Date(now.getTime() + plusMins * 60 * 1000);
-        const payload = { ...basePayload(), published: true, publishedSchedule: final.toISOString() };
+        const payload = { ...basePayload(), published: false, publishedSchedule: final.toISOString() };
         if (editingId) {
           await patchAnnouncement(editingId, payload);
         } else {
