@@ -310,7 +310,7 @@ export function MLDashboard() {
                       </div>
                       <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
                         <p className="text-sm text-purple-600 font-medium">Recommended Staff</p>
-                        <p className="text-3xl font-bold text-purple-700 mt-2">{service.recommendedStaffing}</p>
+                        <p className="text-3xl font-bold text-purple-700 mt-2">{service.recommendedStaff}</p>
                       </div>
                     </div>
                     
