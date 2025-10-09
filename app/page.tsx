@@ -643,6 +643,12 @@ const handleGoogleError = (error: string) => {
                     Reset Password
                   </Link>
                 </li>
+                
+                <li>
+                  <Link href="/api/budget-transparency/download" className="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                    Budget Transparency Report
+                  </Link>
+                </li>
               </ul>
             </div>
 

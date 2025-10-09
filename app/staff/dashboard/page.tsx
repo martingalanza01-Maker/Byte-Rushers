@@ -1,5 +1,7 @@
 "use client"
 
+import UploadBudgetDialog from "@/components/upload-budget-dialog"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -36,6 +38,7 @@ import ResidentLookup from "@/components/resident-lookup"
 
 export default function StaffDashboard() {
     const [residentLookupOpen, setResidentLookupOpen] = useState(false);
+    const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
     const [user, setUser] = useState({
       name: "Juan Dela Cruz",
       email: "juan.delacruz@manggahan.gov.ph",
@@ -633,6 +636,14 @@ const getStatusColor = (status: string) => {
                   </Button>
                   <Button
                     variant="outline"
+                    className="w-full justify-start border-blue-200 text-blue-600 hover:bg-blue-50 bg-transparent"
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    <FileText className="h-4 w-4 mr-3" />
+                    Upload Budget Transparency Report
+                  </Button>
+                  <Button
+                    variant="outline"
                     className="w-full justify-start border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
                     onClick={() => setResidentLookupOpen(true)}
                   >
@@ -645,6 +656,7 @@ const getStatusColor = (status: string) => {
           </div>
         </div>
       </div>
+      <UploadBudgetDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />
       <ResidentLookup open={residentLookupOpen} onClose={() => setResidentLookupOpen(false)} />
     </div>
   )
