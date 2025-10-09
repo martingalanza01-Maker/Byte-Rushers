@@ -35,6 +35,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { apiFetch } from "@/lib/api"
 import ResidentLookup from "@/components/resident-lookup"
+import DownloadResidentFeedbackButton from "@/components/download-resident-feedback-button"
 
 export default function StaffDashboard() {
     const [residentLookupOpen, setResidentLookupOpen] = useState(false);
@@ -650,6 +651,7 @@ const getStatusColor = (status: string) => {
                     <Users className="h-4 w-4 mr-3" />
                     Resident Lookup
                   </Button>
+                  <DownloadResidentFeedbackButton />
                 </CardContent>
               </Card>
             </div>
