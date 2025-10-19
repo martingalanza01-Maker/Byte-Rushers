@@ -10,7 +10,7 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {ArrowLeft, Mail, Shield, CheckCircle, AlertCircle, Eye, EyeOff} from "lucide-react"
 import Link from "next/link"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001"
 
 type Step = "request" | "verify" | "reset" | "success"
 type AccountType = "resident" | "staff"
