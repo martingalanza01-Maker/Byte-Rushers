@@ -74,7 +74,7 @@ async function fetchJson(path: string) {
 // Fetch-first; falls back to the local generator below (no UI change)
 export async function getRealtimePredictions(): Promise<MLInsights> {
   try {
-    const data = await fetchJson('/analytics/ml-insights')
+    const data = await fetchJson('/analytics/ml-insights/chatgpt')
     return data as MLInsights
   } catch {
     return await generateMLInsights()
@@ -84,7 +84,7 @@ export async function getRealtimePredictions(): Promise<MLInsights> {
 // Fetch-first; falls back to the simulated version below (no UI change)
 export async function analyzeTrends(): Promise<TrendAnalysis> {
   try {
-    const data = await fetchJson('/analytics/trends')
+    const data = await fetchJson('/analytics/trends/chatgpt')
     return data as TrendAnalysis
   } catch {
     return defaultAnalyzeTrends()
