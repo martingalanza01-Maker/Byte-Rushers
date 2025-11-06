@@ -171,10 +171,6 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
             {isStaff ? "Review and manage resident complaints" : "Track your submitted complaints and file new ones"}
           </p>
         </div>
-        <Button className="flex items-center space-x-2">
-          <Plus className="h-4 w-4" />
-          <span>{isStaff ? "Manual Entry" : "File Complaint"}</span>
-        </Button>
       </div>
 
       {/* Search and Filter */}
@@ -252,9 +248,6 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
                     {isStaff && (
                       <>
                         <Button variant="outline" size="sm">
@@ -268,11 +261,6 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     {complaint._rawStatus === "active" && (
                       <Button size="sm" onClick={() => markResolved(complaint.id!)}>
                         Mark resolved
-                      </Button>
-                    )}
-                    {!isStaff && complaint.status !== "Resolved" && (
-                      <Button variant="outline" size="sm">
-                        Add Update
                       </Button>
                     )}
                   </div>
@@ -327,9 +315,6 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
                     {complaint._rawStatus === "active" && (
                       <Button size="sm" onClick={() => markResolved(complaint.id!)}>
                         Mark resolved
@@ -388,9 +373,6 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
                     {complaint._rawStatus === "active" && (
                       <Button size="sm" onClick={() => markResolved(complaint.id!)}>
                         Mark resolved
@@ -449,9 +431,6 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
                     {/* no Mark resolved here — already resolved */}
                   </div>
                 </CardContent>

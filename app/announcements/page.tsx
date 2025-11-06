@@ -10,6 +10,8 @@ import { Bell, Calendar, MapPin, Search, Filter, ChevronRight, Users, Clock, Ale
 import Link from "next/link"
 import { apiFetch } from "@/lib/api"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001"
+
 export default function AnnouncementsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
@@ -86,7 +88,8 @@ export default function AnnouncementsPage() {
             hall: item.hall ?? item.barangayHall ?? "All Halls",
             priority, // lowercased
             status,   // 'ongoing' for today, 'upcoming' otherwise
-            attendees: Number(item.attendees ?? 0)
+            attendees: Number(item.attendees ?? 0),
+            imageUrl: item.imageUrl ?? item.image ?? item.coverUrl ?? null,
           }
         });
 
@@ -293,6 +296,15 @@ export default function AnnouncementsPage() {
                         </Badge>
                       </div>
                       
+                      {announcement.imageUrl && (() => {
+                        return (
+                          <img
+                            src={`${API_BASE_URL}/${announcement.imageUrl}`}
+                            alt={announcement.title}
+                            className="w-full h-56 object-cover rounded-md mb-4"
+                          />
+                        );
+                      })()}
                       <p className="text-gray-600 mb-4 leading-relaxed">{announcement.content}</p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -324,10 +336,6 @@ export default function AnnouncementsPage() {
                     <div className="text-sm text-gray-500">
                       Posted by Barangay Administration
                     </div>
-                    <Button variant="outline" size="sm">
-                      View Details
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
