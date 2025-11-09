@@ -338,7 +338,7 @@ return (
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="hall">Preferred Barangay Hall</Label>
+                      <Label htmlFor="hall">Barangay Hall</Label>
                       <Select
                         value={formData.hall}
                         onValueChange={(value) => setFormData({ ...formData, hall: value })}
