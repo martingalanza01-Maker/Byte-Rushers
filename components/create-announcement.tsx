@@ -559,7 +559,7 @@ const [isPublishing, setIsPublishing] = useState(false);
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar mode="single" selected={formData.eventDate}
-                        onSelect={date => handleInputChange("eventDate", date as Date)} initialFocus />
+                        onSelect={date => handleInputChange("eventDate", date as Date)} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus />
                     </PopoverContent>
                   </Popover>
                 </div>
