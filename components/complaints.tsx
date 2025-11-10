@@ -281,7 +281,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       </Button>
                     )}
 
-                    {complaint.evidenceUrl && (
+                    {(complaint._rawStatus === "active" && complaint.evidenceUrl) && (
                       <Button
                         size="sm"
                         onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
@@ -347,7 +347,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       </Button>
                     )}
 
-                    {complaint.evidenceUrl && (
+                    {(complaint._rawStatus === "active" && complaint.evidenceUrl) && (
                       <Button
                         size="sm"
                         onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
@@ -414,7 +414,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       </Button>
                     )}
 
-                    {complaint.evidenceUrl && (
+                    {(complaint._rawStatus === "active" && complaint.evidenceUrl) && (
                       <Button
                         size="sm"
                         onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
