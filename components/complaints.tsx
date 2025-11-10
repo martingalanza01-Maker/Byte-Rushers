@@ -537,6 +537,26 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Remarks Modal — mirrored from Document Requests */}
+      <Dialog open={remarksOpen} onOpenChange={setRemarksOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Remarks</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter remarks..."
+              value={remarksText}
+              onChange={(e) => setRemarksText(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setRemarksOpen(false)} variant="outline">Cancel</Button>
+            <Button onClick={saveRemarks}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
