@@ -304,25 +304,6 @@ return (
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="priority">Priority Level *</Label>
-                      <Select
-                        value={formData.priority}
-                        onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {priorityLevels.map((priority) => (
-                            <SelectItem key={priority.value} value={priority.value}>
-                              {priority.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">

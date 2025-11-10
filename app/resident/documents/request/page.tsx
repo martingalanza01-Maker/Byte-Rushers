@@ -2,8 +2,8 @@
 import FeedbackModal from "@/components/feedback-modal";
 
 import type React from "react"
-
-import { useState } from "react"
+import {apiFetch} from '@/lib/api'
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,11 +32,28 @@ export default function DocumentRequestPage() {
     smsNotifications: true,
     additionalNotes: "",
     status: "pending",
-  })
+  });
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [feedbackDone, setFeedbackDone] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [feedbackDone, setFeedbackDone] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (me?.user) {
+          setFormData((prev) => ({
+            ...prev,
+            requestorName: me.user.fullName || "",
+            email: me.user.email || "",
+            phone: me.user.phone || "",
+            address: me.user.address || "",
+          }));
+        }
+      } catch { }
+    })();
+  }, []);
 
   const documentTypes = [
     {
@@ -69,13 +86,15 @@ export default function DocumentRequestPage() {
       processingTime: "1-2 days",
       requirements: ["Valid ID", "Income Declaration"],
     },
-    {
-      name: "Certificate of Good Moral Character",
-      fee: 40,
-      processingTime: "3-4 days",
-      requirements: ["Valid ID", "Character References"],
-    },
-  ]
+  ];
+
+  const purposes = [
+    "Personal Use",
+    "Business Use",
+    "School Requirement",
+    "Employment Requirement",
+    "Legal Requirement",
+  ];
 
   const barangayHalls = [
     { name: "Napico Hall", address: "Napico Village, Barangay Manggahan", hours: "8AM-5PM" },
@@ -84,7 +103,7 @@ export default function DocumentRequestPage() {
     { name: "Manggahan Proper Hall", address: "Manggahan Proper, Barangay Manggahan", hours: "8AM-5PM" },
   ]
 
-  const selectedDocument = documentTypes.find((doc) => doc.name === formData.documentType)
+  const selectedDocument = documentTypes.find((doc) => doc.name === formData.documentType);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -121,8 +140,8 @@ export default function DocumentRequestPage() {
     }
   }
 
-  
-    
+
+
   const openConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     setConfirmOpen(true);
@@ -130,13 +149,13 @@ export default function DocumentRequestPage() {
   // Calls existing handleSubmit but bypasses the native event since it only uses preventDefault()
   const handleConfirmSubmit = async () => {
     try {
-      await handleSubmit({ preventDefault: () => {} } as unknown as React.FormEvent);
+      await handleSubmit({ preventDefault: () => { } } as unknown as React.FormEvent);
     } finally {
       setConfirmOpen(false);
     }
   };
-if (submitted) {
-return (
+  if (submitted) {
+    return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-2xl mx-auto px-4">
           <Card>
@@ -216,6 +235,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, requestorName: e.target.value })}
                         placeholder="As it appears on your ID"
                         required
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
@@ -226,6 +246,7 @@ return (
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
+                        disabled
                       />
                     </div>
                   </div>
@@ -239,6 +260,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="0917-123-4567"
                         required
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
@@ -249,6 +271,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Block, Lot, Street, Village"
                         required
+                        disabled
                       />
                     </div>
                   </div>
@@ -305,13 +328,21 @@ return (
 
                   <div className="space-y-2">
                     <Label htmlFor="purpose">Purpose *</Label>
-                    <Input
-                      id="purpose"
+                    <Select
                       value={formData.purpose}
-                      onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                      placeholder="e.g., Employment, School enrollment, Business registration"
-                      required
-                    />
+                      onValueChange={(value) => setFormData({ ...formData, purpose: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {purposes.map((purpose) => (
+                          <SelectItem key={purpose} value={purpose}>
+                            {purpose}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -331,28 +362,6 @@ return (
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.additionalNotes}
-                      onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
-                      placeholder="Any special instructions or additional information..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="urgent"
-                      checked={formData.urgentRequest}
-                      onCheckedChange={(checked) => setFormData({ ...formData, urgentRequest: checked as boolean })}
-                    />
-                    <Label htmlFor="urgent" className="text-sm">
-                      Urgent request (additional ₱20 fee for expedited processing)
-                    </Label>
                   </div>
                 </CardContent>
               </Card>
@@ -459,11 +468,11 @@ return (
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                      <span>Under review (1-2 days)</span>
+                      <span>For Approval</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                      <span>Processing ({selectedDocument?.processingTime || "3-5 days"})</span>
+                      <span>Processing</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-300 rounded-full"></div>

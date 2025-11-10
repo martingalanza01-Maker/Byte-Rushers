@@ -521,27 +521,6 @@ const [isPublishing, setIsPublishing] = useState(false);
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <Label>Priority *</Label>
-                  <Select value={formData.priority} onValueChange={v => handleInputChange("priority", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select priority" /></SelectTrigger>
-                    <SelectContent>
-                      {[
-                        {value: "low", label: "Low Priority", color: "bg-gray-100 text-gray-800"},
-                        {value: "medium", label: "Medium Priority", color: "bg-yellow-100 text-yellow-800"},
-                        {value: "high", label: "High Priority", color: "bg-red-100 text-red-800"},
-                        {value: "urgent", label: "Urgent", color: "bg-red-200 text-red-900"},
-                      ].map(p => (
-                        <SelectItem key={p.value} value={p.value}>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={`${p.color} text-xs`}>{p.label}</Badge>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div>
