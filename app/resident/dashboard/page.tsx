@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 
 import { useState, useEffect } from "react"
+import FeedbackModal from "@/components/feedback-modal"
 import { apiFetch } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,8 @@ const [user, setUser] = useState({
   }, []);
 
 
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackPage, setFeedbackPage] = useState<string>("/resident/complaints/new");
   const [stats, setStats] = useState({
     totalRequests: 0,
     pendingRequests: 0,
@@ -258,7 +261,21 @@ const [user, setUser] = useState({
     }
   }
 
-  const getStatusIcon = (status?: string) => {
+  
+  const isFeedbackEligible = (activity: any) => {
+    const t = (activity?.type || activity?.submissionType || "").toString().toLowerCase();
+    const status = (activity?.status || "").toString().toLowerCase();
+    const isDoc = t.includes("document");
+    const isComplaint = t.includes("complaint");
+    return (isDoc && status === "completed") || (isComplaint && status === "resolved");
+  };
+  const openFeedbackFor = (activity: any) => {
+    const t = (activity?.type || activity?.submissionType || "").toString().toLowerCase();
+    const page = t.includes("complaint") ? "/resident/complaints/new" : "/resident/documents/request";
+    setFeedbackPage(page);
+    setFeedbackOpen(true);
+  };
+const getStatusIcon = (status?: string) => {
     switch (status || "pending") {
       case "completed":
         return <CheckCircle className="h-4 w-4" />
@@ -470,7 +487,12 @@ const [user, setUser] = useState({
                               <Calendar className="h-3 w-3 mr-1" />
                               {new Date(activity.date).toLocaleDateString()}
                             </div>
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-2">
+                              {isFeedbackEligible(activity) && (
+                                <Button size="sm" onClick={() => openFeedbackFor(activity)}>
+                                  Provide feedback
+                                </Button>
+                              )}
                             {isDocumentActivity(activity) && (
                             <div className="mt-2">
                               <Button variant="outline" size="sm" className="flex items-center space-x-1 bg-transparent" onClick={() => downloadSubmissionQR(getActivityId(activity), activity.title)}>
@@ -583,6 +605,7 @@ const [user, setUser] = useState({
           </div>
         </div>
       </div>
+    {feedbackOpen && (<FeedbackModal key={String(feedbackPage)} pagePath={feedbackPage} forceOpen />)}
     </div>
   )
 }
