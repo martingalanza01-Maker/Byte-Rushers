@@ -76,6 +76,7 @@ const [user, setUser] = useState({
 
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackPage, setFeedbackPage] = useState<string>("/resident/complaints/new");
+  const [feedbackInstance, setFeedbackInstance] = useState(0);
   const [stats, setStats] = useState({
     totalRequests: 0,
     pendingRequests: 0,
@@ -273,6 +274,7 @@ const [user, setUser] = useState({
     const t = (activity?.type || activity?.submissionType || "").toString().toLowerCase();
     const page = t.includes("complaint") ? "/resident/complaints/new" : "/resident/documents/request";
     setFeedbackPage(page);
+    setFeedbackInstance((v) => v + 1);
     setFeedbackOpen(true);
   };
 const getStatusIcon = (status?: string) => {
@@ -605,7 +607,7 @@ const getStatusIcon = (status?: string) => {
           </div>
         </div>
       </div>
-    {feedbackOpen && (<FeedbackModal key={String(feedbackPage)} pagePath={feedbackPage} forceOpen />)}
+      {feedbackOpen && (<FeedbackModal key={`${feedbackPage}:${feedbackInstance}`} pagePath={feedbackPage} forceOpen onSubmitted={() => setFeedbackOpen(false)} />)}
     </div>
   )
 }
