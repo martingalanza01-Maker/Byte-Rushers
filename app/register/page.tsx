@@ -370,7 +370,7 @@ export default function RegisterPage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="barangayHall">Preferred Barangay Hall *</Label>
+                      <Label htmlFor="barangayHall">Barangay Hall *</Label>
                       <Select value={formData.barangayHall} onValueChange={(value) => handleInputChange('barangayHall', value)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select hall" />

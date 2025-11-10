@@ -1,9 +1,7 @@
 "use client"
-import FeedbackModal from "@/components/feedback-modal";
-
 import type React from "react"
-
-import { useState } from "react"
+import {apiFetch} from '@/lib/api'
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,11 +30,28 @@ export default function DocumentRequestPage() {
     smsNotifications: true,
     additionalNotes: "",
     status: "pending",
-  })
+  });
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [feedbackDone, setFeedbackDone] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+    const [proofFile, setProofFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (me?.user) {
+          setFormData((prev) => ({
+            ...prev,
+            requestorName: me.user.fullName || "",
+            email: me.user.email || "",
+            phone: me.user.phone || "",
+            address: me.user.address || "",
+          }));
+        }
+      } catch { }
+    })();
+  }, []);
 
   const documentTypes = [
     {
@@ -69,13 +84,15 @@ export default function DocumentRequestPage() {
       processingTime: "1-2 days",
       requirements: ["Valid ID", "Income Declaration"],
     },
-    {
-      name: "Certificate of Good Moral Character",
-      fee: 40,
-      processingTime: "3-4 days",
-      requirements: ["Valid ID", "Character References"],
-    },
-  ]
+  ];
+
+  const purposes = [
+    "Personal Use",
+    "Business Use",
+    "School Requirement",
+    "Employment Requirement",
+    "Legal Requirement",
+  ];
 
   const barangayHalls = [
     { name: "Napico Hall", address: "Napico Village, Barangay Manggahan", hours: "8AM-5PM" },
@@ -84,45 +101,68 @@ export default function DocumentRequestPage() {
     { name: "Manggahan Proper Hall", address: "Manggahan Proper, Barangay Manggahan", hours: "8AM-5PM" },
   ]
 
-  const selectedDocument = documentTypes.find((doc) => doc.name === formData.documentType)
+  const selectedDocument = documentTypes.find((doc) => doc.name === formData.documentType);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-      const payload = {
-        name: formData.requestorName,
-        requestorName: formData.requestorName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        submissionType: 'Document',
-        documentType: formData.documentType,
-        purpose: formData.purpose,
-        pickupHall: formData.pickupHall,
-        urgentRequest: formData.urgentRequest,
-        smsNotifications: formData.smsNotifications,
-        additionalNotes: formData.additionalNotes,
-        status: formData.status,
-        fee: ((selectedDocument?.fee || 0) + (formData.urgentRequest ? 20 : 0)),
-        urgent: formData.urgentRequest,
-      };
-      const res = await createSubmission(payload);
-      // Store the returned documentReqId to show in success screen
-      (res && res.documentReqId) && (window.sessionStorage.setItem('last_doc_id', res.documentReqId));
-      setSubmitted(true);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to submit. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+  try {
+    if (!proofFile) {
+      alert("Please upload your Proof of Residency.");
+      return;
     }
-  }
 
-  
-    
+    // Client-side guard so the API never sees blanks
+    const reqName = (formData.requestorName || "").trim();
+    const reqEmail = (formData.email || "").trim();
+    const reqPhone = (formData.phone || "").trim();
+    const reqAddress = (formData.address || "").trim();
+
+    if (!reqName || !reqEmail || !reqPhone || !reqAddress) {
+      alert("Your profile info has not loaded yet. Please wait a moment and try again.");
+      return;
+    }
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+    const form = new FormData();
+    const selectedDocFee = (selectedDocument?.fee || 0) + (formData.urgentRequest ? 20 : 0);
+
+    form.append("name", reqName); // <- guaranteed nonblank
+    form.append("requestorName", reqName);
+    form.append("email", reqEmail);
+    form.append("phone", reqPhone);
+    form.append("address", reqAddress);
+    form.append("submissionType", "Document");
+    form.append("documentType", formData.documentType || "");
+    form.append("purpose", formData.purpose || "");
+    form.append("pickupHall", formData.pickupHall || "");
+    form.append("urgentRequest", String(!!formData.urgentRequest));
+    form.append("smsNotifications", String(!!formData.smsNotifications));
+    form.append("additionalNotes", formData.additionalNotes || "");
+    form.append("status", formData.status || "processing");
+    form.append("fee", String(selectedDocFee));
+    form.append("urgent", String(!!formData.urgentRequest));
+    form.append("file", proofFile);
+
+    // Use apiFetch so JSON is parsed and FormData headers are handled
+    const response = await fetch(`${API_BASE}/submissions/upload`, { method: 'POST', body: form } as RequestInit)
+    const result = await response.json();
+
+    if (result?.documentReqId) {
+      window.sessionStorage.setItem("last_doc_id", result.documentReqId);
+    }
+    setSubmitted(true);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+
+
   const openConfirm = (e: React.FormEvent) => {
     e.preventDefault();
     setConfirmOpen(true);
@@ -130,13 +170,13 @@ export default function DocumentRequestPage() {
   // Calls existing handleSubmit but bypasses the native event since it only uses preventDefault()
   const handleConfirmSubmit = async () => {
     try {
-      await handleSubmit({ preventDefault: () => {} } as unknown as React.FormEvent);
+      await handleSubmit({ preventDefault: () => { } } as unknown as React.FormEvent);
     } finally {
       setConfirmOpen(false);
     }
   };
-if (submitted) {
-return (
+  if (submitted) {
+    return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-2xl mx-auto px-4">
           <Card>
@@ -145,7 +185,7 @@ return (
                 <FileText className="h-8 w-8 text-green-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Request Submitted Successfully</h2>
-              <FeedbackModal pagePath="/resident/documents/request" forceOpen onSubmitted={() => setFeedbackDone(true)} />
+              
               <p className="text-gray-600 mb-6">
                 Your document request has been received and assigned ID: <strong>{typeof window !== 'undefined' ? (sessionStorage.getItem('last_doc_id') || 'N/A') : 'N/A'}</strong>
               </p>
@@ -160,16 +200,8 @@ return (
                 </ul>
               </div>
               <div className="flex space-x-4 justify-center">
-                {feedbackDone ? (
-                  <Link href="/resident/dashboard"><Button>Go to Dashboard</Button></Link>
-                ) : (
-                  <Button disabled>Go to Dashboard</Button>
-                )}
-                {feedbackDone ? (
-                  <Button variant="outline" onClick={() => setSubmitted(false)}>Request Another</Button>
-                ) : (
-                  <Button variant="outline" disabled>Request Another</Button>
-                )}
+                <Link href="/resident/dashboard"><Button>Go to Dashboard</Button></Link>
+                <Button variant="outline" onClick={() => setSubmitted(false)}>Request Another</Button>
               </div>
             </CardContent>
           </Card>
@@ -216,6 +248,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, requestorName: e.target.value })}
                         placeholder="As it appears on your ID"
                         required
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
@@ -226,6 +259,7 @@ return (
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
+                        disabled
                       />
                     </div>
                   </div>
@@ -239,6 +273,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="0917-123-4567"
                         required
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
@@ -249,6 +284,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Block, Lot, Street, Village"
                         required
+                        disabled
                       />
                     </div>
                   </div>
@@ -305,13 +341,21 @@ return (
 
                   <div className="space-y-2">
                     <Label htmlFor="purpose">Purpose *</Label>
-                    <Input
-                      id="purpose"
+                    <Select
                       value={formData.purpose}
-                      onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                      placeholder="e.g., Employment, School enrollment, Business registration"
-                      required
-                    />
+                      onValueChange={(value) => setFormData({ ...formData, purpose: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select purpose" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {purposes.map((purpose) => (
+                          <SelectItem key={purpose} value={purpose}>
+                            {purpose}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -333,26 +377,20 @@ return (
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Additional Notes (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.additionalNotes}
-                      onChange={(e) => setFormData({ ...formData, additionalNotes: e.target.value })}
-                      placeholder="Any special instructions or additional information..."
-                      rows={3}
+                  {/* Proof of Residency Upload (required) */}
+                  <div>
+                    <Label htmlFor="proofFile">Proof of Residency <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="proofFile"
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx"
+                      required
+                      onChange={(e) => {
+                        const f = e.currentTarget.files?.[0] || null;
+                        setProofFile(f);
+                      }}
                     />
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="urgent"
-                      checked={formData.urgentRequest}
-                      onCheckedChange={(checked) => setFormData({ ...formData, urgentRequest: checked as boolean })}
-                    />
-                    <Label htmlFor="urgent" className="text-sm">
-                      Urgent request (additional ₱20 fee for expedited processing)
-                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">Accepted: images (JPEG/PNG) or documents (PDF/DOC/DOCX).</p>
                   </div>
                 </CardContent>
               </Card>
@@ -459,11 +497,11 @@ return (
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                      <span>Under review (1-2 days)</span>
+                      <span>For Approval</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                      <span>Processing ({selectedDocument?.processingTime || "3-5 days"})</span>
+                      <span>Processing</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-gray-300 rounded-full"></div>

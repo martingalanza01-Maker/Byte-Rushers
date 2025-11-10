@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -17,14 +19,52 @@ interface ComplaintsProps {
 export function Complaints({ user, onNavigate }: ComplaintsProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [items, setItems] = useState<any[]>([])
+  const [remarksOpen, setRemarksOpen] = useState(false)
+  const [remarksText, setRemarksText] = useState("")
+  const [remarksTargetId, setRemarksTargetId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isStaff = user?.role === "Staff"
 
   // safe lowercase helper to avoid "toLowerCase of undefined" errors
   const lc = (v: unknown) => (v ?? "").toString().toLowerCase()
+  async function reload() {
+    try {
+      setLoading(true); setError(null)
+      const filter = encodeURIComponent(JSON.stringify({
+        where: { submissionType: "Complaints/Inquiry" },
+        order: ["createdAt DESC"],
+      }))
+      const res = await apiFetch(`/submissions?filter=${filter}`)
+      const raw: any[] = Array.isArray(res) ? res : res?.data || []
+      const mapped = raw.map((r) => ({
+        id: r.id,
+        title: r.title || r.subject || r.category || "Complaint",
+        description: r.description ?? r.details ?? "",
+        category: r.category ?? "",
+        status: lc(r.status) === "active" ? "Under Investigation" : lc(r.status) === "resolved" ? "Resolved" : r.status || "New",
+        priority: r.priority || "Medium",
+        resident: r.name || "Anonymous",
+        date: r.createdAt || r.date || new Date().toISOString(),
+        location: r.location || "",
+        _rawStatus: lc(r.status || ""),
+        _rawCreatedAt: r.createdAt,
+        evidenceUrl: r.evidenceUrl || null,
+        remarks: r.remarks || "",
+      }))
+      setItems(mapped)
+    } catch {
+      setError("Failed to load complaints")
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
   // Fetch submissions (Complaints/Inquiry) once and normalize to your card shape
+  function openRemarks(id: string, current: string = "") { setRemarksTargetId(id); setRemarksText(current || ""); setRemarksOpen(true); }
+  async function saveRemarks(){ if(!remarksTargetId) return; await apiFetch(`/submissions/${remarksTargetId}/remarks`, { method:"POST", body: JSON.stringify({remarks: remarksText}) }); setRemarksOpen(false); setRemarksTargetId(null); setRemarksText(""); await reload() }
+
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -59,6 +99,8 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           // keep original status for logic checks
           _rawStatus: lc(r.status || ""),
           _rawCreatedAt: r.createdAt,
+          evidenceUrl: r.evidenceUrl || null,
+          remarks: r.remarks || "",
         }))
 
         if (mounted) setItems(mapped)
@@ -116,6 +158,22 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
     } catch {
       // optional: toast
     }
+  }
+
+    async function downloadEvidence(urlPath?: string, id?: string) {
+    try {
+      if (!urlPath) return;
+      const res = await fetch(`/api${urlPath}`);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      const linkUrl = URL.createObjectURL(blob);
+      a.href = linkUrl;
+      a.download = `Proof-of-Evidence-${id || 'complaint'}` + (urlPath.split('.').pop() ? '.' + urlPath.split('.').pop() : '');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(linkUrl);
+    } catch {}
   }
 
   // UI helpers (unchanged)
@@ -223,6 +281,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                           {getStatusIcon(complaint.status)}
                           <span className="ml-1">{complaint.status}</span>
                         </Badge>
+                        {complaint.remarks && (<p className="mt-2 text-sm text-gray-700"><strong>Remarks:</strong> {complaint.remarks}</p>)}
                         <Badge className={getPriorityColor(complaint.priority)}>{complaint.priority}</Badge>
                         <Badge variant="outline">{complaint.category}</Badge>
                       </div>
@@ -258,9 +317,17 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                         </Button>
                       </>
                     )}
-                    {complaint._rawStatus === "active" && (
-                      <Button size="sm" onClick={() => markResolved(complaint.id!)}>
-                        Mark resolved
+                    {complaint._rawStatus === "active" && (<>
+                      <Button size="sm" onClick={() => markResolved(complaint.id!)}>Mark resolved</Button>
+                      <Button size="sm" onClick={() => openRemarks(complaint.id!, complaint.remarks || "")}>Add remarks</Button>
+                    </>)}
+
+                    {(complaint._rawStatus === "active" && complaint.evidenceUrl) && (
+                      <Button
+                        size="sm"
+                        onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
+                      >
+                        Download Evidence
                       </Button>
                     )}
                   </div>
@@ -290,6 +357,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                           {getStatusIcon(complaint.status)}
                           <span className="ml-1">{complaint.status}</span>
                         </Badge>
+                        {complaint.remarks && (<p className="mt-2 text-sm text-gray-700"><strong>Remarks:</strong> {complaint.remarks}</p>)}
                         <Badge className={getPriorityColor(complaint.priority)}>{complaint.priority}</Badge>
                         <Badge variant="outline">{complaint.category}</Badge>
                       </div>
@@ -315,9 +383,17 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    {complaint._rawStatus === "active" && (
-                      <Button size="sm" onClick={() => markResolved(complaint.id!)}>
-                        Mark resolved
+                    {complaint._rawStatus === "active" && (<>
+                      <Button size="sm" onClick={() => markResolved(complaint.id!)}>Mark resolved</Button>
+                      <Button size="sm" onClick={() => openRemarks(complaint.id!, complaint.remarks || "")}>Add remarks</Button>
+                    </>)}
+
+                    {(complaint._rawStatus === "active" && complaint.evidenceUrl) && (
+                      <Button
+                        size="sm"
+                        onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
+                      >
+                        Download Evidence
                       </Button>
                     )}
                   </div>
@@ -348,6 +424,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                           {getStatusIcon(complaint.status)}
                           <span className="ml-1">{complaint.status}</span>
                         </Badge>
+                        {complaint.remarks && (<p className="mt-2 text-sm text-gray-700"><strong>Remarks:</strong> {complaint.remarks}</p>)}
                         <Badge className={getPriorityColor(complaint.priority)}>{complaint.priority}</Badge>
                         <Badge variant="outline">{complaint.category}</Badge>
                       </div>
@@ -373,9 +450,17 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                   </div>
 
                   <div className="flex space-x-2">
-                    {complaint._rawStatus === "active" && (
-                      <Button size="sm" onClick={() => markResolved(complaint.id!)}>
-                        Mark resolved
+                    {complaint._rawStatus === "active" && (<>
+                      <Button size="sm" onClick={() => markResolved(complaint.id!)}>Mark resolved</Button>
+                      <Button size="sm" onClick={() => openRemarks(complaint.id!, complaint.remarks || "")}>Add remarks</Button>
+                    </>)}
+
+                    {(complaint._rawStatus === "active" && complaint.evidenceUrl) && (
+                      <Button
+                        size="sm"
+                        onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
+                      >
+                        Download Evidence
                       </Button>
                     )}
                   </div>
@@ -406,6 +491,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                           {getStatusIcon(complaint.status)}
                           <span className="ml-1">{complaint.status}</span>
                         </Badge>
+                        {complaint.remarks && (<p className="mt-2 text-sm text-gray-700"><strong>Remarks:</strong> {complaint.remarks}</p>)}
                         <Badge className={getPriorityColor(complaint.priority)}>{complaint.priority}</Badge>
                         <Badge variant="outline">{complaint.category}</Badge>
                       </div>
@@ -451,6 +537,26 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Remarks Modal — mirrored from Document Requests */}
+      <Dialog open={remarksOpen} onOpenChange={setRemarksOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Remarks</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter remarks..."
+              value={remarksText}
+              onChange={(e) => setRemarksText(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setRemarksOpen(false)} variant="outline">Cancel</Button>
+            <Button onClick={saveRemarks}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
