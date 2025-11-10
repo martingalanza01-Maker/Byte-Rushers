@@ -1,7 +1,7 @@
 "use client"
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ArrowLeft, Upload, Phone, Mail, AlertTriangle } from "lucide-react"
+import {apiFetch} from "@/lib/api"
 import Link from "next/link"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
@@ -25,6 +26,9 @@ export default function NewComplaintPage() {
     complaintType: "",
     priority: "",
     location: "",
+    houseNumber: "",
+    street: "",
+    purokZone: "",
     hall: "",
     subject: "",
     description: "",
@@ -37,6 +41,23 @@ export default function NewComplaintPage() {
   const [submitted, setSubmitted] = useState(false)
   const [submittedComplaintId, setSubmittedComplaintId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await apiFetch('/auth/me');
+        if (me?.user && !formData.anonymous) {
+          setFormData(prev => ({
+            ...prev,
+            complainantName: me.user.fullName || prev.complainantName || "",
+            email: me.user.email || prev.email || "",
+            phone: me.user.phone || prev.phone || "",
+            address: me.user.address || prev.address || "",
+          }));
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [formData.anonymous]);
+
 
   const complaintTypes = [
     "Infrastructure Issues",
@@ -75,6 +96,9 @@ export default function NewComplaintPage() {
         if (formData.complaintType) fd.append('type', formData.complaintType)
         if (formData.priority) fd.append('priority', formData.priority)
         if (formData.location) fd.append('location', formData.location)
+        if (formData.houseNumber) fd.append('houseNumber', formData.houseNumber)
+        if (formData.street) fd.append('street', formData.street)
+        if (formData.purokZone) fd.append('purokZone', formData.purokZone)
         if (formData.hall) fd.append('hall', formData.hall)
         if (formData.subject) fd.append('subject', formData.subject)
         if (formData.description) fd.append('message', formData.description)
@@ -213,7 +237,7 @@ return (
                         value={formData.complainantName}
                         onChange={(e) => setFormData({ ...formData, complainantName: e.target.value })}
                         required
-                        disabled={formData.anonymous}
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
@@ -224,7 +248,7 @@ return (
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         required
-                        disabled={formData.anonymous}
+                        disabled
                       />
                     </div>
                   </div>
@@ -238,6 +262,7 @@ return (
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="0917-123-4567"
                         required
+                        disabled
                       />
                     </div>
                     <div className="space-y-2">
@@ -247,6 +272,7 @@ return (
                         value={formData.address}
                         onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         placeholder="Block, Lot, Street"
+                        disabled
                       />
                     </div>
                   </div>
@@ -297,7 +323,7 @@ return (
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="location">Specific Location *</Label>
+                      <Label htmlFor="location">Landmark *</Label>
                       <Input
                         id="location"
                         value={formData.location}
@@ -305,6 +331,45 @@ return (
                         placeholder="e.g., Main Street, Block 1"
                         required
                       />
+                    </div>
+
+
+                    <div className="space-y-2">
+                      <Label htmlFor="houseNumber">House Number *</Label>
+                      <Input
+                        id="houseNumber"
+                        value={formData.houseNumber}
+                        onChange={(e) => setFormData({ ...formData, houseNumber: e.target.value })}
+                        placeholder="e.g., 123"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="street">Street *</Label>
+                      <Input
+                        id="street"
+                        value={formData.street}
+                        onChange={(e) => setFormData({ ...formData, street: e.target.value })}
+                        placeholder="e.g., J.P. Rizal St."
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="purokZone">Purok/Zone *</Label>
+                      <Select required value={formData.purokZone} onValueChange={(value) => setFormData({ ...formData, purokZone: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select purok" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="purok-1">Purok 1</SelectItem>
+                          <SelectItem value="purok-2">Purok 2</SelectItem>
+                          <SelectItem value="purok-3">Purok 3</SelectItem>
+                          <SelectItem value="purok-4">Purok 4</SelectItem>
+                          <SelectItem value="purok-5">Purok 5</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">

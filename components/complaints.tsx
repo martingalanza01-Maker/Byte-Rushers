@@ -59,6 +59,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           // keep original status for logic checks
           _rawStatus: lc(r.status || ""),
           _rawCreatedAt: r.createdAt,
+          evidenceUrl: r.evidenceUrl || null,
         }))
 
         if (mounted) setItems(mapped)
@@ -116,6 +117,22 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
     } catch {
       // optional: toast
     }
+  }
+
+    async function downloadEvidence(urlPath?: string, id?: string) {
+    try {
+      if (!urlPath) return;
+      const res = await fetch(`/api${urlPath}`);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      const linkUrl = URL.createObjectURL(blob);
+      a.href = linkUrl;
+      a.download = `Proof-of-Evidence-${id || 'complaint'}` + (urlPath.split('.').pop() ? '.' + urlPath.split('.').pop() : '');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(linkUrl);
+    } catch {}
   }
 
   // UI helpers (unchanged)
@@ -263,6 +280,15 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                         Mark resolved
                       </Button>
                     )}
+
+                    {complaint.evidenceUrl && (
+                      <Button
+                        size="sm"
+                        onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
+                      >
+                        Download Evidence
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -318,6 +344,15 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     {complaint._rawStatus === "active" && (
                       <Button size="sm" onClick={() => markResolved(complaint.id!)}>
                         Mark resolved
+                      </Button>
+                    )}
+
+                    {complaint.evidenceUrl && (
+                      <Button
+                        size="sm"
+                        onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
+                      >
+                        Download Evidence
                       </Button>
                     )}
                   </div>
@@ -376,6 +411,15 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     {complaint._rawStatus === "active" && (
                       <Button size="sm" onClick={() => markResolved(complaint.id!)}>
                         Mark resolved
+                      </Button>
+                    )}
+
+                    {complaint.evidenceUrl && (
+                      <Button
+                        size="sm"
+                        onClick={() => downloadEvidence(complaint.evidenceUrl, complaint.id)}
+                      >
+                        Download Evidence
                       </Button>
                     )}
                   </div>
