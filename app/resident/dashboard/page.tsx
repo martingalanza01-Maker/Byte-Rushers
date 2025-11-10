@@ -135,6 +135,7 @@ const [user, setUser] = useState({
       status: "completed",
       date: "2024-01-15",
       description: "Your barangay clearance is ready for pickup",
+      remarks: "",
     },
     {
       id: 2,
@@ -150,6 +151,7 @@ const [user, setUser] = useState({
       status: "new",
       date: "2024-01-10",
       description: "Join us this Saturday for our monthly clean-up",
+      remarks: "",
     },
   ])
 
@@ -339,6 +341,7 @@ const getStatusIcon = (status?: string) => {
           status: s.status,
           date: s.createdAt || s.created || new Date().toISOString(),
           description: s.description || (s.complaintId ? `Reference: ${s.complaintId}` : s.documentReqId ? `Reference: ${s.documentReqId}` : "Submitted"),
+          remarks: s.remarks,
         }));
         setRecentActivity(mapped);
       } catch (e) { /* noop */ }
@@ -484,6 +487,7 @@ const getStatusIcon = (status?: string) => {
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
+                            {activity.remarks && (<p className="text-sm text-gray-700"><strong>Remarks:</strong> {activity.remarks}</p>)}
                           <div className="flex items-center text-xs text-gray-500">
                             <div className="flex items-center mr-4">
                               <Calendar className="h-3 w-3 mr-1" />
