@@ -24,7 +24,8 @@ type DocRow = {
   completedDate: string | null
   fee: number | null
   purpose: string
-  qrCode: boolean
+  qrCode: boolean,
+  fileUrl?: string
 }
 
 export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
@@ -55,6 +56,7 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
       fee: s.fee ?? null,
       purpose: s.purpose || s.reason || "",
       qrCode: true,
+      fileUrl: s.fileUrl || s.evidenceUrl,
     }
   }
 
@@ -111,6 +113,22 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+    } catch {}
+  }
+
+    async function downloadProof(urlPath?: string, id?: string) {
+    try {
+      if (!urlPath) return;
+      const res = await fetch(`/api${urlPath}`);
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      const linkUrl = URL.createObjectURL(blob);
+      a.href = linkUrl;
+      a.download = `Proof-of-Residency-${id || 'document'}` + (urlPath.split('.').pop() ? '.' + urlPath.split('.').pop() : '');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(linkUrl);
     } catch {}
   }
 
@@ -222,6 +240,15 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
             >
               <QrCode className="h-3 w-3" />
               <span>QR Code</span>
+            </Button>
+          )}
+
+          {request.fileUrl && (
+            <Button
+              size="sm"
+              onClick={() => downloadProof(request.fileUrl, request.id)}
+            >
+              Download Proof of Residency
             </Button>
           )}
 

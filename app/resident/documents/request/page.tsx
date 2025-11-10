@@ -37,6 +37,7 @@ export default function DocumentRequestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [feedbackDone, setFeedbackDone] = useState(false);
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -106,39 +107,62 @@ export default function DocumentRequestPage() {
   const selectedDocument = documentTypes.find((doc) => doc.name === formData.documentType);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    try {
-      const api = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-      const payload = {
-        name: formData.requestorName,
-        requestorName: formData.requestorName,
-        email: formData.email,
-        phone: formData.phone,
-        address: formData.address,
-        submissionType: 'Document',
-        documentType: formData.documentType,
-        purpose: formData.purpose,
-        pickupHall: formData.pickupHall,
-        urgentRequest: formData.urgentRequest,
-        smsNotifications: formData.smsNotifications,
-        additionalNotes: formData.additionalNotes,
-        status: formData.status,
-        fee: ((selectedDocument?.fee || 0) + (formData.urgentRequest ? 20 : 0)),
-        urgent: formData.urgentRequest,
-      };
-      const res = await createSubmission(payload);
-      // Store the returned documentReqId to show in success screen
-      (res && res.documentReqId) && (window.sessionStorage.setItem('last_doc_id', res.documentReqId));
-      setSubmitted(true);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to submit. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+  try {
+    if (!proofFile) {
+      alert("Please upload your Proof of Residency.");
+      return;
     }
+
+    // Client-side guard so the API never sees blanks
+    const reqName = (formData.requestorName || "").trim();
+    const reqEmail = (formData.email || "").trim();
+    const reqPhone = (formData.phone || "").trim();
+    const reqAddress = (formData.address || "").trim();
+
+    if (!reqName || !reqEmail || !reqPhone || !reqAddress) {
+      alert("Your profile info has not loaded yet. Please wait a moment and try again.");
+      return;
+    }
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+    const form = new FormData();
+    const selectedDocFee = (selectedDocument?.fee || 0) + (formData.urgentRequest ? 20 : 0);
+
+    form.append("name", reqName); // <- guaranteed nonblank
+    form.append("requestorName", reqName);
+    form.append("email", reqEmail);
+    form.append("phone", reqPhone);
+    form.append("address", reqAddress);
+    form.append("submissionType", "Document");
+    form.append("documentType", formData.documentType || "");
+    form.append("purpose", formData.purpose || "");
+    form.append("pickupHall", formData.pickupHall || "");
+    form.append("urgentRequest", String(!!formData.urgentRequest));
+    form.append("smsNotifications", String(!!formData.smsNotifications));
+    form.append("additionalNotes", formData.additionalNotes || "");
+    form.append("status", formData.status || "processing");
+    form.append("fee", String(selectedDocFee));
+    form.append("urgent", String(!!formData.urgentRequest));
+    form.append("file", proofFile);
+
+    // Use apiFetch so JSON is parsed and FormData headers are handled
+    const response = await fetch(`${API_BASE}/submissions/upload`, { method: 'POST', body: form } as RequestInit)
+    const result = await response.json();
+
+    if (result?.documentReqId) {
+      window.sessionStorage.setItem("last_doc_id", result.documentReqId);
+    }
+    setSubmitted(true);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to submit. Please try again.");
+  } finally {
+    setIsSubmitting(false);
   }
+};
 
 
 
@@ -362,6 +386,22 @@ export default function DocumentRequestPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* Proof of Residency Upload (required) */}
+                  <div>
+                    <Label htmlFor="proofFile">Proof of Residency <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="proofFile"
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx"
+                      required
+                      onChange={(e) => {
+                        const f = e.currentTarget.files?.[0] || null;
+                        setProofFile(f);
+                      }}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Accepted: images (JPEG/PNG) or documents (PDF/DOC/DOCX).</p>
                   </div>
                 </CardContent>
               </Card>
