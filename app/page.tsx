@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import BudgetTransparencyModal from '@/components/budget-transparency-modal'
+import BudgetTransparencyModal from "@/components/budget-transparency-modal"
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -35,6 +35,9 @@ import Image from "next/image"
 import { GoogleLoginButton } from "@/components/google-login-button"
 import type { GoogleUser } from "@/lib/google-auth"
 import { apiFetch } from '@/lib/api'
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+const budgetTransparencyUrl = `${API_BASE_URL}/budget-versions/latest/download`;
 
 export default function HomePage() {
   const [sendingQuick, setSendingQuick] = useState(false);
@@ -162,6 +165,15 @@ const handleGoogleError = (error: string) => {
       bgColor: "from-yellow-50 to-yellow-100",
       link: "/contact",
       stats: "24/7 availability",
+    },
+    {
+      title: "Budget Transparency",
+      description: "View the latest and previous budget reports",
+      icon: FileText,
+      color: "from-emerald-500 to-emerald-600",
+      bgColor: "from-emerald-50 to-emerald-100",
+      link: "#budget-transparency",
+      stats: "Updated regularly",
     },
   ]
 
@@ -459,11 +471,11 @@ const handleGoogleError = (error: string) => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {services.map((service, index) => {
               const Icon = service.icon
               return (
-                <Link key={index} href={service.link} onClick={(e)=> { if (service.link === '#budget-transparency') { e.preventDefault(); setBudgetModalOpen(true);} }}>
+                <Link key={index} href={service.link} onClick={(e) => { if (service.link === '#budget-transparency') { e.preventDefault(); setBudgetModalOpen(true); } }}>
                   <Card className="border-0 shadow-lg card-hover bg-gradient-to-br from-white to-gray-50 h-full">
                     <CardContent className="p-6">
                       <div
@@ -646,9 +658,9 @@ const handleGoogleError = (error: string) => {
                     Reset Password
                   </Link>
                 </li>
-                
+
                 <li>
-                  <Link href="/api/budget-transparency/download" className="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
+                  <Link href={budgetTransparencyUrl} className="hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
                     Budget Transparency Report
                   </Link>
                 </li>
@@ -687,7 +699,7 @@ const handleGoogleError = (error: string) => {
           </div>
         </div>
       </footer>
-          <BudgetTransparencyModal open={budgetModalOpen} onOpenChange={setBudgetModalOpen} />
+      <BudgetTransparencyModal open={budgetModalOpen} onOpenChange={setBudgetModalOpen} />
     </div>
   )
 }
