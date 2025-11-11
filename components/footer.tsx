@@ -2,6 +2,8 @@ import { Building, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Youtube } 
 import Link from "next/link"
 
 export function Footer() {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001'
+
   const currentYear = new Date().getFullYear()
 
   const quickLinks = [
@@ -10,6 +12,7 @@ export function Footer() {
     { name: "Services", href: "/services" },
     { name: "Contact", href: "/contact" },
     { name: "About", href: "/about" },
+    { name: "Budget Transparency Report", href: `${API_BASE_URL}/budget-versions/latest/download` },
   ]
 
   const services = [

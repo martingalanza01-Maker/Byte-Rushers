@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import BudgetTransparencyModal from '@/components/budget-transparency-modal'
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -122,6 +123,8 @@ const handleGoogleError = (error: string) => {
     console.error("Google login error:", error)
     setError("Google login failed. Please try again.")
   }
+
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
 
   const services = [
     {
@@ -460,7 +463,7 @@ const handleGoogleError = (error: string) => {
             {services.map((service, index) => {
               const Icon = service.icon
               return (
-                <Link key={index} href={service.link}>
+                <Link key={index} href={service.link} onClick={(e)=> { if (service.link === '#budget-transparency') { e.preventDefault(); setBudgetModalOpen(true);} }}>
                   <Card className="border-0 shadow-lg card-hover bg-gradient-to-br from-white to-gray-50 h-full">
                     <CardContent className="p-6">
                       <div
@@ -684,6 +687,7 @@ const handleGoogleError = (error: string) => {
           </div>
         </div>
       </footer>
+          <BudgetTransparencyModal open={budgetModalOpen} onOpenChange={setBudgetModalOpen} />
     </div>
   )
 }
