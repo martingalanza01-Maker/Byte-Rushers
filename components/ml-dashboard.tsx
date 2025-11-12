@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Brain, TrendingUp, MapPin, Users, AlertTriangle, Clock, Target, BarChart3, RefreshCw, Zap, Shield, Activity, Sparkles, Star } from 'lucide-react'
+import {
+  Brain, TrendingUp, MapPin, Users, AlertTriangle, Clock, Target,
+  BarChart3, RefreshCw, Zap, Shield, Activity, Sparkles, Star, Info
+} from 'lucide-react'
 import { generateMLInsights, getRealtimePredictions, analyzeTrends, type MLInsights, type TrendAnalysis } from "@/lib/ml-predictions"
 
 export function MLDashboard() {
@@ -14,6 +17,9 @@ export function MLDashboard() {
   const [trends, setTrends] = useState<TrendAnalysis | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+
+  // Legend modal state
+  const [legendOpen, setLegendOpen] = useState(false)
 
   useEffect(() => {
     loadInitialData()
@@ -88,14 +94,26 @@ export function MLDashboard() {
             Machine learning insights to optimize barangay services and resource allocation
           </p>
         </div>
-        <div className="flex items-center space-x-4">
+
+        <div className="flex items-center space-x-3">
+          {/* Legend button (opens modal) */}
+          <Button
+            variant="outline"
+            onClick={() => setLegendOpen(true)}
+            className="inline-flex items-center gap-2"
+          >
+            <Info className="h-4 w-4" />
+            Legend
+          </Button>
+
           <div className="text-sm text-gray-600 bg-white/80 px-4 py-2 rounded-full border">
             <Clock className="h-4 w-4 inline mr-2" />
             Last updated: {lastUpdated.toLocaleTimeString()}
           </div>
-          <Button 
-            onClick={refreshPredictions} 
-            disabled={isLoading} 
+
+          <Button
+            onClick={refreshPredictions}
+            disabled={isLoading}
             className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -103,6 +121,60 @@ export function MLDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* LEGEND MODAL (simple, dependency-free) */}
+      {legendOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div className="max-w-lg w-[92vw] rounded-lg bg-background p-5 shadow-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">What these metrics mean</h2>
+              <button
+                onClick={() => setLegendOpen(false)}
+                className="text-sm px-2 py-1 rounded hover:bg-muted"
+                aria-label="Close legend"
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-4 space-y-4 text-sm leading-6">
+              <div>
+                <div className="font-medium">Risk score (0–100)</div>
+                <div>
+                  A model-derived indicator of how likely a hall is to receive complaints in the next 7 days.
+                  <br />
+                  <span className="font-medium">0–39</span> Low,&nbsp;
+                  <span className="font-medium">40–69</span> Medium,&nbsp;
+                  <span className="font-medium">70–100</span> High.
+                </div>
+              </div>
+
+              <div>
+                <div className="font-medium">Peak hours</div>
+                <div>
+                  Hours of the day when demand is expected to spike (local time), derived from recent seasonality
+                  and the 7-day forecast.
+                </div>
+              </div>
+
+              <div>
+                <div className="font-medium">Priority services</div>
+                <div>
+                  Top services to focus on (per hall or overall) based on predicted demand and risk; use to guide
+                  staffing and proactive actions.
+                </div>
+              </div>
+
+              <div className="text-muted-foreground">
+                As of <span className="font-mono">{insights?.lastUpdated ?? lastUpdated.toISOString()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overview Stats */}
       {insights && (
@@ -173,34 +245,19 @@ export function MLDashboard() {
       {/* Main Content */}
       <Tabs defaultValue="hotspots" className="space-y-8">
         <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-blue-100 to-yellow-100 p-1 h-12">
-          <TabsTrigger 
-            value="hotspots" 
-            className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md font-semibold"
-          >
+          <TabsTrigger value="hotspots" className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md font-semibold">
             Complaint Hotspots
           </TabsTrigger>
-          <TabsTrigger 
-            value="demand"
-            className="data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-md font-semibold"
-          >
+          <TabsTrigger value="demand" className="data-[state=active]:bg-white data-[state=active]:text-yellow-600 data-[state=active]:shadow-md font-semibold">
             Service Demand
           </TabsTrigger>
-          <TabsTrigger 
-            value="resources"
-            className="data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-md font-semibold"
-          >
+          <TabsTrigger value="resources" className="data-[state=active]:bg-white data-[state=active]:text-green-600 data-[state=active]:shadow-md font-semibold">
             Resource Allocation
           </TabsTrigger>
-          <TabsTrigger 
-            value="emergency"
-            className="data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-md font-semibold"
-          >
+          <TabsTrigger value="emergency" className="data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-md font-semibold">
             Emergency Prediction
           </TabsTrigger>
-          <TabsTrigger 
-            value="recommendations"
-            className="data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md font-semibold"
-          >
+          <TabsTrigger value="recommendations" className="data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md font-semibold">
             AI Recommendations
           </TabsTrigger>
         </TabsList>
@@ -238,7 +295,7 @@ export function MLDashboard() {
                         Risk: {hotspot.riskScore}%
                       </Badge>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <p className="text-sm font-semibold mb-3 text-gray-700">Common Issues:</p>
@@ -250,7 +307,7 @@ export function MLDashboard() {
                           ))}
                         </div>
                       </div>
-                      
+
                       <div>
                         <p className="text-sm font-semibold mb-3 text-gray-700">Recommended Actions:</p>
                         <ul className="text-sm text-gray-600 space-y-2">
@@ -298,7 +355,7 @@ export function MLDashboard() {
                         {service.confidence}% confidence
                       </Badge>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-3 gap-6">
                       <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
                         <p className="text-sm text-blue-600 font-medium">Current Demand</p>
@@ -313,7 +370,7 @@ export function MLDashboard() {
                         <p className="text-3xl font-bold text-purple-700 mt-2">{service.recommendedStaff}</p>
                       </div>
                     </div>
-                    
+
                     <div className="mt-4">
                       <p className="text-sm font-semibold mb-3 text-gray-700">Peak Hours:</p>
                       <div className="flex flex-wrap gap-2">
@@ -356,15 +413,15 @@ export function MLDashboard() {
                     <div className="flex justify-between items-center mb-4">
                       <h4 className="font-bold text-xl text-gray-800">{hall.hall}</h4>
                       <Badge className={`font-semibold px-4 py-2 ${
-                        hall.efficiency >= 80 ? "bg-gradient-to-r from-green-100 to-green-200 text-green-800" : 
-                        hall.efficiency >= 60 ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800" : 
+                        hall.efficiency >= 80 ? "bg-gradient-to-r from-green-100 to-green-200 text-green-800" :
+                        hall.efficiency >= 60 ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800" :
                         "bg-gradient-to-r from-red-100 to-red-200 text-red-800"
                       }`}>
                         <Activity className="h-3 w-3 mr-1" />
                         {hall.efficiency}% efficient
                       </Badge>
                     </div>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <div className="flex justify-between mb-2">
@@ -373,7 +430,7 @@ export function MLDashboard() {
                         </div>
                         <Progress value={hall.currentLoad} className="h-3" />
                       </div>
-                      
+
                       <div>
                         <div className="flex justify-between mb-2">
                           <span className="text-sm font-medium text-gray-600">Predicted Load:</span>
@@ -381,12 +438,12 @@ export function MLDashboard() {
                         </div>
                         <Progress value={hall.predictedLoad} className="h-3" />
                       </div>
-                      
+
                       <div className="flex justify-between p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl">
                         <span className="text-sm font-medium text-blue-600">Recommended Staff:</span>
                         <span className="font-bold text-blue-700">{hall.recommendedStaff} people</span>
                       </div>
-                      
+
                       <div>
                         <p className="text-sm font-semibold mb-3 text-gray-700">Priority Services:</p>
                         <div className="flex flex-wrap gap-2">
@@ -449,7 +506,7 @@ export function MLDashboard() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <p className="text-sm font-semibold mb-3 text-gray-700">Required Resources:</p>
@@ -462,7 +519,7 @@ export function MLDashboard() {
                           ))}
                         </ul>
                       </div>
-                      
+
                       <div>
                         <p className="text-sm font-semibold mb-3 text-gray-700">Preventive Measures:</p>
                         <ul className="text-sm text-gray-600 space-y-2">
@@ -525,7 +582,7 @@ export function MLDashboard() {
                     </Button>
                   </div>
                 ))}
-                
+
                 {(!insights?.recommendations || insights.recommendations.length === 0) && (
                   <div className="text-center py-12 bg-gradient-to-br from-green-50 to-white rounded-2xl">
                     <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
