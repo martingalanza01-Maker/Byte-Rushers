@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Bell, Calendar, MapPin, Search, Filter, ChevronRight, Users, Clock, AlertCircle } from 'lucide-react'
 import Link from "next/link"
 import { apiFetch } from "@/lib/api"
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001"
 
@@ -17,6 +18,9 @@ export default function AnnouncementsPage() {
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterHall, setFilterHall] = useState("all")
   const [isAuthed, setIsAuthed] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [previewAlt, setPreviewAlt] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -297,12 +301,24 @@ export default function AnnouncementsPage() {
                       </div>
                       
                       {announcement.imageUrl && (() => {
+                        const src = `${API_BASE_URL}/${announcement.imageUrl}`;
                         return (
-                          <img
-                            src={`${API_BASE_URL}/${announcement.imageUrl}`}
-                            alt={announcement.title}
-                            className="w-full h-56 object-cover rounded-md mb-4"
-                          />
+                          <button
+                            type="button"
+                            className="w-full"
+                            onClick={() => {
+                              setPreviewSrc(src);
+                              setPreviewAlt(announcement.title || "Announcement image");
+                              setPreviewOpen(true);
+                            }}
+                            aria-label="Open image preview"
+                          >
+                            <img
+                              src={src}
+                              alt={announcement.title}
+                              className="w-full h-56 object-cover rounded-md mb-4 hover:opacity-95 transition"
+                            />
+                          </button>
                         );
                       })()}
                       <p className="text-gray-600 mb-4 leading-relaxed">{announcement.content}</p>
@@ -359,6 +375,18 @@ export default function AnnouncementsPage() {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-4xl p-0 bg-transparent border-0 shadow-none">
+          {/* Click/press ESC to close; Dialog handles focus & escape by default */}
+          {previewSrc && (
+            <img
+              src={previewSrc}
+              alt={previewAlt}
+              className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

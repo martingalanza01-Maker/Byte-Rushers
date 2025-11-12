@@ -41,7 +41,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
         id: r.id,
         title: r.title || r.subject || r.category || "Complaint",
         description: r.description ?? r.details ?? "",
-        category: r.category ?? "",
+        category: r.type ?? "",
         status: lc(r.status) === "active" ? "Under Investigation" : lc(r.status) === "resolved" ? "Resolved" : r.status || "New",
         priority: r.priority || "Medium",
         resident: r.name || "Anonymous",
@@ -51,6 +51,8 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
         _rawCreatedAt: r.createdAt,
         evidenceUrl: r.evidenceUrl || null,
         remarks: r.remarks || "",
+        complaintId: r.complaintId || "",
+        type: r.type || "",
       }))
       setItems(mapped)
     } catch {
@@ -85,7 +87,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           id: r.id,
           title: r.title || r.subject || r.category || "Complaint",
           description: r.description ?? r.details ?? "",
-          category: r.category ?? "",
+          category: r.type ?? "",
           status:
             lc(r.status) === "active"
               ? "Under Investigation"
@@ -101,6 +103,8 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           _rawCreatedAt: r.createdAt,
           evidenceUrl: r.evidenceUrl || null,
           remarks: r.remarks || "",
+          complaintId: r.complaintId || "",
+          type: r.type || "",
         }))
 
         if (mounted) setItems(mapped)
@@ -127,7 +131,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
     if (!searchTerm.trim()) return items
     const q = lc(searchTerm)
     return items.filter(
-      (c) => lc(c.title).includes(q) || lc(c.description).includes(q) || lc(c.category).includes(q),
+      (c) => lc(c.title).includes(q) || lc(c.description).includes(q) || lc(c.type).includes(q),
     )
   }, [items, searchTerm])
 
@@ -274,7 +278,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{complaint.title}</CardTitle>
                       <CardDescription className="mb-3">
-                        ID: {complaint.id} • {complaint.resident}
+                        ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
@@ -350,7 +354,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{complaint.title}</CardTitle>
                       <CardDescription className="mb-3">
-                        ID: {complaint.id} • {complaint.resident}
+                        ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
@@ -417,7 +421,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{complaint.title}</CardTitle>
                       <CardDescription className="mb-3">
-                        ID: {complaint.id} • {complaint.resident}
+                        ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
@@ -484,7 +488,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{complaint.title}</CardTitle>
                       <CardDescription className="mb-3">
-                        ID: {complaint.id} • {complaint.resident}
+                        ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>

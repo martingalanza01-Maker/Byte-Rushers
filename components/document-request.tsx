@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect, useMemo, useState} from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,9 +48,9 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
     const st = (stRaw || "").toLowerCase()
     return st === "pending" ? "Processing"
       : st === "ready" ? "Ready for Pickup"
-      : st === "completed" ? "Completed"
-      : st === "cancelled" ? "Cancelled"
-      : stRaw || "Processing"
+        : st === "completed" ? "Completed"
+          : st === "cancelled" ? "Cancelled"
+            : stRaw || "Processing"
   }
 
   const getStatusColor = (status: string) => {
@@ -102,7 +102,7 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
 
   useEffect(() => {
     let mounted = true
-    ;(async () => { if (mounted) await reloadDocs() })()
+      ; (async () => { if (mounted) await reloadDocs() })()
     return () => { mounted = false }
   }, [])
 
@@ -191,6 +191,11 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
     [documentRequests]
   )
 
+  const cancelledRequests = useMemo(
+    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("cancelled")),
+    [documentRequests]
+  )
+
   // ---- card renderer (keep function pattern; do NOT convert to JSX component) ----
   const RequestCard = (
     request: DocRow,
@@ -268,20 +273,21 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
           )}
 
           {showCancelButton && (
-            <>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => cancelRequest(request.rawId)}
-              >
-                Cancel
-              </Button>
-              {/* NEW: Add remarks visible only when showCancelButton is true (Processing) */}
-              <Button size="sm" onClick={() => openRemarks(request.rawId, request.remarks || "")}>
-                Add remarks
-              </Button>
-            </>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => cancelRequest(request.rawId)}
+            >
+              Cancel
+            </Button>
           )}
+
+          {/* NEW: Add remarks visible only when showCancelButton is true (Processing) */}
+          {
+            <Button size="sm" onClick={() => openRemarks(request.rawId, request.remarks || "")}>
+              Add remarks
+            </Button>
+          }
 
           {isStaff && (
             <>
@@ -325,6 +331,7 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="ready">Ready</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
@@ -334,15 +341,19 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
 
         {/* Processing (pending) — show Cancel + Add remarks */}
         <TabsContent value="processing" className="space-y-4">
-          {processingRequests.map((r) => RequestCard(r, { showCancelButton: true }))}
+          {processingRequests.map((r) => RequestCard(r, { showCancelButton: true, showReadyButton: true }))}
         </TabsContent>
 
         <TabsContent value="ready" className="space-y-4">
-          {readyRequests.map((r) => RequestCard(r, { showReadyButton: true }))}
+          {readyRequests.map((r) => RequestCard(r, { showCancelButton: true }))}
         </TabsContent>
 
         <TabsContent value="completed" className="space-y-4">
           {completedRequests.map((r) => RequestCard(r))}
+        </TabsContent>
+
+        <TabsContent value="cancelled" className="space-y-4">
+          {cancelledRequests.map((r) => RequestCard(r))}
         </TabsContent>
       </Tabs>
 
