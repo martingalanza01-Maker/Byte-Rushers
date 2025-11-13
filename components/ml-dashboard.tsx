@@ -576,10 +576,6 @@ export function MLDashboard() {
                         </span>
                       </div>
                     </div>
-                    <Button className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg">
-                      <Zap className="h-4 w-4 mr-2" />
-                      Implement
-                    </Button>
                   </div>
                 ))}
 
