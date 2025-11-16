@@ -45,6 +45,11 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
         status: lc(r.status) === "active" ? "Under Investigation" : lc(r.status) === "resolved" ? "Resolved" : r.status || "New",
         priority: r.priority || "Medium",
         resident: r.name || "Anonymous",
+        contact: r.phone || "",
+        address: r.address ||
+          [r.houseNumber, r.street, r.purok, r.barangayHall]
+            .filter(Boolean)
+            .join(", "),
         date: r.createdAt || r.date || new Date().toISOString(),
         location: r.location || "",
         _rawStatus: lc(r.status || ""),
@@ -105,6 +110,11 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           remarks: r.remarks || "",
           complaintId: r.complaintId || "",
           type: r.type || "",
+          contact: r.phone || "",
+          address: r.address ||
+            [r.houseNumber, r.street, r.purok, r.barangayHall]
+              .filter(Boolean)
+              .join(", "),
         }))
 
         if (mounted) setItems(mapped)
@@ -286,6 +296,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                        {complaint.contact && (
+                          <p className="text-sm text-gray-700">
+                            Contact: {complaint.contact}
+                          </p>
+                        )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
@@ -362,6 +382,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                      {complaint.contact && (
+                        <p className="text-sm text-gray-700">
+                          Contact: {complaint.contact}
+                        </p>
+                      )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
@@ -429,6 +459,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                      {complaint.contact && (
+                        <p className="text-sm text-gray-700">
+                          Contact: {complaint.contact}
+                        </p>
+                      )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
@@ -496,6 +536,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                      {complaint.contact && (
+                        <p className="text-sm text-gray-700">
+                          Contact: {complaint.contact}
+                        </p>
+                      )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}

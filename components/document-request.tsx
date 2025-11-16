@@ -21,6 +21,9 @@ type DocRow = {
   rawId: string
   type: string
   resident: string
+  /** Resident contact number (from submission.phone) */
+  contact?: string
+  address?: string
   status: string
   requestDate: string
   completedDate?: string | null
@@ -78,11 +81,18 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
 
   function shape(s: any): DocRow {
     const status = mapStatus(s.status)
+    const address =
+      s.address ||
+      [s.houseNumber, s.street, s.purok, s.barangayHall]
+        .filter(Boolean)
+        .join(", ")
     return {
       id: String(s.documentReqId || s.id),
       rawId: String(s.id),
       type: s.documentType || "Document",
       resident: s.name || s.requestorName || "Unknown",
+      contact: s.phone || "",
+      address: address || "",
       status,
       requestDate: (s.createdAt || "").slice(0, 10),
       completedDate: status === "Completed" ? (s.updatedAt || "").slice(0, 10) : null,
@@ -233,6 +243,16 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
             <CardDescription className="mb-3">
               ID: {request.id} • {request.resident}
             </CardDescription>
+            {request.contact && (
+              <p className="text-sm text-gray-700">
+                Contact: {request.contact}
+              </p>
+            )}
+            {request.address && (
+              <p className="text-sm text-gray-700">
+                Address: {request.address}
+              </p>
+            )}
             <Badge className={getStatusColor(request.status)}>
               {getStatusIcon(request.status)}
               <span className="ml-1">{request.status}</span>
