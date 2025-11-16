@@ -1,6 +1,7 @@
 "use client"
 
 import UploadBudgetDialog from "@/components/upload-budget-dialog"
+import StaffSubmissionsChart from "@/components/staff-submissions-chart"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -413,6 +414,11 @@ const getStatusColor = (status: string) => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Submissions Overview Chart */}
+          <div className="mb-8">
+            <StaffSubmissionsChart />
           </div>
 
           {/* Quick Actions */}
