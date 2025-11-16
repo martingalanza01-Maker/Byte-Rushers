@@ -29,7 +29,7 @@ export default function DocumentRequestPage() {
     urgentRequest: false,
     smsNotifications: true,
     additionalNotes: "",
-    status: "pending",
+    status: "verification",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,7 +140,7 @@ export default function DocumentRequestPage() {
     form.append("urgentRequest", String(!!formData.urgentRequest));
     form.append("smsNotifications", String(!!formData.smsNotifications));
     form.append("additionalNotes", formData.additionalNotes || "");
-    form.append("status", formData.status || "processing");
+    form.append("status", formData.status || "verification");
     form.append("fee", String(selectedDocFee));
     form.append("urgent", String(!!formData.urgentRequest));
     form.append("file", proofFile);

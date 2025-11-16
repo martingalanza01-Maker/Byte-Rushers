@@ -46,15 +46,17 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
   // ---- helpers ----
   const mapStatus = (stRaw: string) => {
     const st = (stRaw || "").toLowerCase()
-    return st === "pending" ? "Processing"
-      : st === "ready" ? "Ready for Pickup"
-        : st === "completed" ? "Completed"
-          : st === "cancelled" ? "Cancelled"
-            : stRaw || "Processing"
+    return st === "verification" ? "Pending Verification"
+      : st === "pending" ? "Processing"
+        : st === "ready" ? "Ready for Pickup"
+          : st === "completed" ? "Completed"
+            : st === "cancelled" ? "Cancelled"
+              : stRaw || "Processing"
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "Pending Verification": return "bg-yellow-100 text-yellow-800"
       case "Processing": return "bg-yellow-100 text-yellow-800"
       case "Ready for Pickup": return "bg-blue-100 text-blue-800"
       case "Completed": return "bg-green-100 text-green-800"
@@ -65,6 +67,7 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "Pending Verification": return <Clock className="h-4 w-4" />
       case "Processing": return <Clock className="h-4 w-4" />
       case "Ready for Pickup": return <Plus className="h-4 w-4" />
       case "Completed": return <CheckCircle className="h-4 w-4" />
@@ -110,6 +113,14 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
     await apiFetch(`/submissions/${rawId}/status`, {
       method: "POST",
       body: JSON.stringify({ status: "ready" }),
+    })
+    await reloadDocs()
+  }
+
+  async function markVerified(rawId: string) {
+    await apiFetch(`/submissions/${rawId}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status: "pending" }),
     })
     await reloadDocs()
   }
@@ -178,6 +189,11 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
     )
   }, [documentRequests, searchTerm])
 
+  const pendingVerificationRequests = useMemo(
+    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("pending verification")),
+    [documentRequests]
+  )
+
   const processingRequests = useMemo(
     () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("processing")),
     [documentRequests]
@@ -199,7 +215,11 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
   // ---- card renderer (keep function pattern; do NOT convert to JSX component) ----
   const RequestCard = (
     request: DocRow,
-    { showReadyButton = false, showCancelButton = false }: { showReadyButton?: boolean; showCancelButton?: boolean } = {}
+    {
+      showReadyButton = false,
+      showCancelButton = false,
+      showVerificationButton = false,
+    }: { showReadyButton?: boolean; showCancelButton?: boolean; showVerificationButton?: boolean } = {}
   ) => (
     <Card key={request.id} className="hover:shadow-md transition-shadow">
       <CardHeader>
@@ -282,6 +302,12 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
             </Button>
           )}
 
+          {showVerificationButton && (
+            <Button size="sm" onClick={() => markVerified(request.rawId)}>
+              Residency Verified
+            </Button>
+          )}
+
           {/* NEW: Add remarks visible only when showCancelButton is true (Processing) */}
           {
             <Button size="sm" onClick={() => openRemarks(request.rawId, request.remarks || "")}>
@@ -326,8 +352,9 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
       </Card>
 
       <Tabs defaultValue="processing" className="space-y-4">
-        <TabsList>
+      <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="verification">Pending Verification</TabsTrigger>
           <TabsTrigger value="processing">Processing</TabsTrigger>
           <TabsTrigger value="ready">Ready</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
@@ -337,6 +364,12 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
         <TabsContent value="all" className="space-y-4">
           {/* keep function call form (not JSX component) */}
           {filteredRequests.map((r) => RequestCard(r))}
+        </TabsContent>
+
+        <TabsContent value="verification" className="space-y-4">
+          {pendingVerificationRequests.map((r) =>
+            RequestCard(r, { showCancelButton: true, showVerificationButton: true })
+          )}
         </TabsContent>
 
         {/* Processing (pending) — show Cancel + Add remarks */}
