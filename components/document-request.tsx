@@ -182,34 +182,38 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
   // ---- derived lists & filter ----
   const filteredRequests = useMemo(() => {
     const q = (searchTerm || "").toLowerCase()
+    if (!q) return documentRequests
     return documentRequests.filter((r) =>
       (r.type || "").toLowerCase().includes(q) ||
       (r.resident || "").toLowerCase().includes(q) ||
-      String(r.id || "").toLowerCase().includes(q)
+      (r.status || "").toLowerCase().includes(q) ||
+      (r.purpose || "").toLowerCase().includes(q) ||
+      String(r.id || "").toLowerCase().includes(q) ||
+      String(r.rawId || "").toLowerCase().includes(q)
     )
   }, [documentRequests, searchTerm])
 
   const pendingVerificationRequests = useMemo(
-    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("pending verification")),
-    [documentRequests]
+    () => filteredRequests.filter(r => (r.status || "").toLowerCase().includes("pending verification")),
+    [filteredRequests]
   )
 
   const processingRequests = useMemo(
-    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("processing")),
-    [documentRequests]
+    () => filteredRequests.filter(r => (r.status || "").toLowerCase().includes("processing")),
+    [filteredRequests]
   )
   const readyRequests = useMemo(
-    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("ready")),
-    [documentRequests]
+    () => filteredRequests.filter(r => (r.status || "").toLowerCase().includes("ready")),
+    [filteredRequests]
   )
   const completedRequests = useMemo(
-    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("completed")),
-    [documentRequests]
+    () => filteredRequests.filter(r => (r.status || "").toLowerCase().includes("completed")),
+    [filteredRequests]
   )
 
   const cancelledRequests = useMemo(
-    () => documentRequests.filter(r => (r.status || "").toLowerCase().includes("cancelled")),
-    [documentRequests]
+    () => filteredRequests.filter(r => (r.status || "").toLowerCase().includes("cancelled")),
+    [filteredRequests]
   )
 
   // ---- card renderer (keep function pattern; do NOT convert to JSX component) ----

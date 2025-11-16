@@ -126,12 +126,18 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
     return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()
   }
 
-  // Base filtering by search term (title/description/category)
+  // Base filtering by search term (title/description/category/id)
   const filtered = useMemo(() => {
     if (!searchTerm.trim()) return items
     const q = lc(searchTerm)
-    return items.filter(
-      (c) => lc(c.title).includes(q) || lc(c.description).includes(q) || lc(c.type).includes(q),
+    return items.filter((c) =>
+      lc(c.title).includes(q) ||
+      lc(c.description).includes(q) ||
+      lc(c.category || c.type || "").includes(q) ||
+      lc(c.resident || "").includes(q) ||
+      lc(c.status || "").includes(q) ||
+      lc(c.complaintId || "").includes(q) ||
+      lc(String(c.id || "")).includes(q)
     )
   }, [items, searchTerm])
 
