@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Plus, Filter, Clock, CheckCircle, AlertCircle, MessageSquare } from "lucide-react"
+import { Search, Plus, Clock, CheckCircle, AlertCircle, MessageSquare, XCircle } from "lucide-react"
 import { apiFetch } from "@/lib/api"
 
 interface ComplaintsProps {
@@ -24,7 +24,10 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
   const [remarksTargetId, setRemarksTargetId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const isStaff = user?.role === "Staff"
+  const [activeTab, setActiveTab] = useState("all")
+  const [resolvedDateFilter, setResolvedDateFilter] = useState<string | null>(null)
+  const isStaff = String(user?.type || user?.role || "").toLowerCase() === "staff"
+  const showResolvedDateFilter = isStaff && activeTab === "resolved"
 
   // safe lowercase helper to avoid "toLowerCase of undefined" errors
   const lc = (v: unknown) => (v ?? "").toString().toLowerCase()
@@ -32,7 +35,8 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
     try {
       setLoading(true); setError(null)
       const filter = encodeURIComponent(JSON.stringify({
-        where: { submissionType: "Complaints/Inquiry" },
+        // Include both legacy "Complaints/Inquiry" and newer plain "Complaint" types
+        where: { submissionType: { inq: ["Complaint", "Complaints/Inquiry"] } },
         order: ["createdAt DESC"],
       }))
       const res = await apiFetch(`/submissions?filter=${filter}`)
@@ -45,6 +49,11 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
         status: lc(r.status) === "active" ? "Under Investigation" : lc(r.status) === "resolved" ? "Resolved" : r.status || "New",
         priority: r.priority || "Medium",
         resident: r.name || "Anonymous",
+        contact: r.phone || "",
+        address: r.address ||
+          [r.houseNumber, r.street, r.purok, r.barangayHall]
+            .filter(Boolean)
+            .join(", "),
         date: r.createdAt || r.date || new Date().toISOString(),
         location: r.location || "",
         _rawStatus: lc(r.status || ""),
@@ -101,10 +110,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
           // keep original status for logic checks
           _rawStatus: lc(r.status || ""),
           _rawCreatedAt: r.createdAt,
+          completedDate: r.dateCompleted ? String(r.dateCompleted).slice(0, 10) : null,
           evidenceUrl: r.evidenceUrl || null,
           remarks: r.remarks || "",
           complaintId: r.complaintId || "",
           type: r.type || "",
+          contact: r.phone || "",
+          address: r.address ||
+            [r.houseNumber, r.street, r.purok, r.barangayHall]
+              .filter(Boolean)
+              .join(", "),
         }))
 
         if (mounted) setItems(mapped)
@@ -145,7 +160,13 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
   const allComplaints = filtered
   const newComplaints = filtered.filter((c) => c._rawStatus === "active" && isToday(c._rawCreatedAt))
   const investigating = filtered.filter((c) => c._rawStatus === "active")
-  const resolved = filtered.filter((c) => c._rawStatus === "resolved")
+  const resolved = filtered
+    .filter((c) => c._rawStatus === "resolved")
+    .filter((c) => {
+      if (!resolvedDateFilter) return true
+      const d = (c.completedDate || "").slice(0, 10)
+      return d === resolvedDateFilter
+    })
 
   // Mark resolved (only for active items)
   async function markResolved(id: string) {
@@ -244,7 +265,7 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
       {/* Search and Filter */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="flex space-x-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
@@ -254,16 +275,34 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" className="flex items-center space-x-2 bg-transparent">
-              <Filter className="h-4 w-4" />
-              <span>Filter</span>
-            </Button>
+            {showResolvedDateFilter && (
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <span className="text-sm text-gray-600 whitespace-nowrap">Resolved on:</span>
+                <input
+                  type="date"
+                  value={resolvedDateFilter || ""}
+                  onChange={(e) => setResolvedDateFilter(e.target.value || null)}
+                  className="border rounded-md px-2 py-1 text-sm"
+                />
+                {resolvedDateFilter && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setResolvedDateFilter(null)}
+                    aria-label="Clear date filter"
+                  >
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Complaints Tabs */}
-      <Tabs defaultValue="all" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="all">All Complaints</TabsTrigger>
           <TabsTrigger value="new">New</TabsTrigger>
@@ -286,6 +325,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                        {complaint.contact && (
+                          <p className="text-sm text-gray-700">
+                            Contact: {complaint.contact}
+                          </p>
+                        )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
@@ -362,6 +411,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                      {complaint.contact && (
+                        <p className="text-sm text-gray-700">
+                          Contact: {complaint.contact}
+                        </p>
+                      )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
@@ -429,6 +488,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                      {complaint.contact && (
+                        <p className="text-sm text-gray-700">
+                          Contact: {complaint.contact}
+                        </p>
+                      )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
@@ -496,6 +565,16 @@ export function Complaints({ user, onNavigate }: ComplaintsProps) {
                       <CardDescription className="mb-3">
                         ID: {complaint.complaintId} • {complaint.resident}
                       </CardDescription>
+                      {complaint.contact && (
+                        <p className="text-sm text-gray-700">
+                          Contact: {complaint.contact}
+                        </p>
+                      )}
+                      {complaint.address && (
+                        <p className="text-sm text-gray-700">
+                          Address: {complaint.address}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-2">
                         <Badge className={getStatusColor(complaint.status)}>
                           {getStatusIcon(complaint.status)}
