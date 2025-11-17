@@ -287,7 +287,7 @@ export function MLDashboard() {
                       <div>
                         <h4 className="font-bold text-xl text-gray-800">{hotspot.location}</h4>
                         <p className="text-sm text-gray-600 mt-1">
-                          Predicted complaints: <span className="font-semibold text-blue-600">{hotspot.predictedComplaints}</span>
+                          Predicted complaints: <span className="font-semibold text-blue-600">{Math.round(hotspot.predictedComplaints)}</span>
                         </p>
                       </div>
                       <Badge className={`${getRiskColor(hotspot.riskScore)} font-semibold px-4 py-2`}>
