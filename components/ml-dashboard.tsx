@@ -199,9 +199,8 @@ export function MLDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-red-600 mb-1">High-Risk Areas</p>
-                  <p className="text-3xl font-bold text-red-700">
-                  {Math.round(
-                    (insights.hotspots.filter(h => h.riskScore >= 70).length / insights.hotspots.length) * 100)}%
+                   <p className="text-3xl font-bold text-red-700">
+                    {insights.hotspots.filter(h => h.riskScore >= 70).length}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center">
