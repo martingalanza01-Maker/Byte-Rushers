@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
-import { Search, Plus, FileText, Clock, CheckCircle, QrCode, DollarSign, Calendar, XCircle } from "lucide-react"
+import { Search, Plus, FileText, Clock, CheckCircle, QrCode, Coins, Calendar, XCircle } from "lucide-react"
 import { apiFetch } from "@/lib/api"
 
 interface DocumentRequestProps {
@@ -291,7 +291,7 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <DollarSign className="h-4 w-4" />
+            <Coins className="h-4 w-4" />
             <div>
               <span className="font-medium">Fee:</span>
               <p>₱{request.fee}</p>
