@@ -39,12 +39,17 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [documentRequests, setDocumentRequests] = useState<DocRow[]>([])
 
+  // Staff Completed-tab date filter
+  const [activeTab, setActiveTab] = useState("processing")
+  const [completedDateFilter, setCompletedDateFilter] = useState<string | null>(null)
+
   // NEW: remarks modal state
   const [remarksOpen, setRemarksOpen] = useState(false)
   const [remarksText, setRemarksText] = useState("")
   const [remarksTargetId, setRemarksTargetId] = useState<string | null>(null)
 
-  const isStaff = user?.role === "Staff"
+  const isStaff = String(user?.type || user?.role || "").toLowerCase() === "staff"
+  const showDateFilter = isStaff && activeTab === "completed"
 
   // ---- helpers ----
   const mapStatus = (stRaw: string) => {
@@ -95,7 +100,7 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
       address: address || "",
       status,
       requestDate: (s.createdAt || "").slice(0, 10),
-      completedDate: status === "Completed" ? (s.updatedAt || "").slice(0, 10) : null,
+      completedDate: s.dateCompleted ? String(s.dateCompleted).slice(0, 10) : null,
       fee: s.fee ?? null,
       purpose: s.purpose || s.reason || "",
       qrCode: true,
@@ -108,7 +113,10 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
   async function reloadDocs() {
     const data = await apiFetch("/submissions")
     const docs = (Array.isArray(data) ? data : [])
-      .filter((s: any) => (s.submissionType || "").toLowerCase() === "document")
+      .filter((s: any) => {
+      const t = (s.submissionType || s.type || "").toLowerCase();
+      return t === "document" || t === "document request" || t.includes("document");
+    })
       .map(shape)
     setDocumentRequests(docs)
   }
@@ -217,8 +225,15 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
     [filteredRequests]
   )
   const completedRequests = useMemo(
-    () => filteredRequests.filter(r => (r.status || "").toLowerCase().includes("completed")),
-    [filteredRequests]
+    () =>
+      filteredRequests
+        .filter((r) => (r.status || "").toLowerCase().includes("completed"))
+        .filter((r) => {
+          if (!completedDateFilter) return true
+          const d = (r.completedDate || "").slice(0, 10)
+          return d === completedDateFilter
+        }),
+    [filteredRequests, completedDateFilter]
   )
 
   const cancelledRequests = useMemo(
@@ -362,8 +377,8 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
       </div>
 
       <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="relative">
+        <CardContent className="p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search requests..."
@@ -372,10 +387,32 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
               className="pl-10"
             />
           </div>
+          {showDateFilter && (
+            <div className="flex items-center gap-2 mt-2 sm:mt-0">
+              <span className="text-sm text-gray-600 whitespace-nowrap">Completed on:</span>
+              <input
+                type="date"
+                value={completedDateFilter || ""}
+                onChange={(e) => setCompletedDateFilter(e.target.value || null)}
+                className="border rounded-md px-2 py-1 text-sm"
+              />
+              {completedDateFilter && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCompletedDateFilter(null)}
+                  aria-label="Clear date filter"
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="processing" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
       <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="verification">Pending Verification</TabsTrigger>
