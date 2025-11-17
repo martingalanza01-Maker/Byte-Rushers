@@ -353,13 +353,6 @@ export function DocumentRequest({ user, onNavigate }: DocumentRequestProps) {
               Add remarks
             </Button>
           }
-
-          {isStaff && (
-            <>
-              <Button variant="outline" size="sm">Process</Button>
-              <Button variant="outline" size="sm">Generate QR</Button>
-            </>
-          )}
         </div>
       </CardContent>
     </Card>
