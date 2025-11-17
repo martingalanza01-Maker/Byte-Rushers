@@ -292,7 +292,7 @@ export function MLDashboard() {
                       </div>
                       <Badge className={`${getRiskColor(hotspot.riskScore)} font-semibold px-4 py-2`}>
                         <AlertTriangle className="h-3 w-3 mr-1" />
-                        Risk: {hotspot.riskScore}%
+                        Risk: {Math.round(hotspot.riskScore)}%
                       </Badge>
                     </div>
 
